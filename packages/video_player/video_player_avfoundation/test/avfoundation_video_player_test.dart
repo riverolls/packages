@@ -565,7 +565,7 @@ void main() {
                     mockChannel,
                     const StandardMethodCodec()
                         .encodeSuccessEnvelope(<String, dynamic>{
-                          'event': 'initialized',
+                          'event': 'playbackInfoChanged',
                           'duration': 98765,
                           'width': 1920,
                           'height': 1080,
@@ -662,7 +662,7 @@ void main() {
         player.videoEventsFor(playerId),
         emitsInOrder(<dynamic>[
           VideoEvent(
-            eventType: VideoEventType.initialized,
+            eventType: VideoEventType.isPlaybackInfoUpdate,
             duration: const Duration(milliseconds: 98765),
             size: const Size(1920, 1080),
           ),

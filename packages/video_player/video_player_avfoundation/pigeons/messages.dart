@@ -46,10 +46,10 @@ abstract class AVFoundationVideoPlayerApi {
   // Creates a new player using a platform view for rendering and returns its
   // ID.
   @ObjCSelector('createPlatformViewPlayerWithOptions:')
-  int createForPlatformView(CreationOptions params);
+  int createForPlatformView([CreationOptions? params]);
   // Creates a new player using a texture for rendering and returns its IDs.
   @ObjCSelector('createTexturePlayerWithOptions:')
-  TexturePlayerIds createForTextureView(CreationOptions creationOptions);
+  TexturePlayerIds createForTextureView([CreationOptions? creationOptions]);
   @ObjCSelector('setMixWithOthers:')
   void setMixWithOthers(bool mixWithOthers);
   @ObjCSelector('fileURLForAssetWithName:package:')
@@ -58,6 +58,8 @@ abstract class AVFoundationVideoPlayerApi {
 
 @HostApi()
 abstract class VideoPlayerInstanceApi {
+  @ObjCSelector('setDataSource:')
+  void setDataSource(CreationOptions options);
   @ObjCSelector('setLooping:')
   void setLooping(bool looping);
   @ObjCSelector('setVolume:')
@@ -71,5 +73,6 @@ abstract class VideoPlayerInstanceApi {
   @ObjCSelector('seekTo:')
   void seekTo(int position);
   void pause();
+  void stop();
   void dispose();
 }

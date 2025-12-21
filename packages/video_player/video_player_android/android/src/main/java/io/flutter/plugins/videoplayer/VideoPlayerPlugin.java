@@ -82,8 +82,8 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
 
   @OptIn(markerClass = UnstableApi.class)
   @Override
-  public long createForPlatformView(@NonNull CreationOptions options) {
-    final VideoAsset videoAsset = videoAssetWithOptions(options);
+  public long createForPlatformView(@Nullable CreationOptions options) {
+    final VideoAsset videoAsset = VideoAsset.fromOptions(options);
 
     long id = nextPlayerIdentifier++;
     final String streamInstance = Long.toString(id);
@@ -100,8 +100,8 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
 
   @OptIn(markerClass = UnstableApi.class)
   @Override
-  public @NonNull TexturePlayerIds createForTextureView(@NonNull CreationOptions options) {
-    final VideoAsset videoAsset = videoAssetWithOptions(options);
+  public @NonNull TexturePlayerIds createForTextureView(@Nullable CreationOptions options) {
+    final VideoAsset videoAsset = VideoAsset.fromOptions(options);
 
     long id = nextPlayerIdentifier++;
     final String streamInstance = Long.toString(id);
@@ -116,33 +116,6 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
 
     registerPlayerInstance(videoPlayer, id);
     return new TexturePlayerIds(id, handle.id());
-  }
-
-  private @NonNull VideoAsset videoAssetWithOptions(@NonNull CreationOptions options) {
-    final @NonNull String uri = options.getUri();
-    if (uri.startsWith("asset:")) {
-      return VideoAsset.fromAssetUrl(uri);
-    } else if (uri.startsWith("rtsp:")) {
-      return VideoAsset.fromRtspUrl(uri);
-    } else {
-      VideoAsset.StreamingFormat streamingFormat = VideoAsset.StreamingFormat.UNKNOWN;
-      PlatformVideoFormat formatHint = options.getFormatHint();
-      if (formatHint != null) {
-        switch (formatHint) {
-          case SS:
-            streamingFormat = VideoAsset.StreamingFormat.SMOOTH;
-            break;
-          case DASH:
-            streamingFormat = VideoAsset.StreamingFormat.DYNAMIC_ADAPTIVE;
-            break;
-          case HLS:
-            streamingFormat = VideoAsset.StreamingFormat.HTTP_LIVE;
-            break;
-        }
-      }
-      return VideoAsset.fromRemoteUrl(
-          uri, streamingFormat, options.getHttpHeaders(), options.getUserAgent());
-    }
   }
 
   private void registerPlayerInstance(VideoPlayer player, long id) {

@@ -47,20 +47,21 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
       @NonNull Context context,
       @NonNull VideoPlayerCallbacks events,
       @NonNull SurfaceProducer surfaceProducer,
-      @NonNull VideoAsset asset,
+      @Nullable VideoAsset asset,
       @NonNull VideoPlayerOptions options) {
     return new TextureVideoPlayer(
         events,
         surfaceProducer,
-        asset.getMediaItem(),
+        asset != null ? asset.getMediaItem() : null,
         options,
         () -> {
           androidx.media3.exoplayer.trackselection.DefaultTrackSelector trackSelector =
               new androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context);
-          ExoPlayer.Builder builder =
-              new ExoPlayer.Builder(context)
-                  .setTrackSelector(trackSelector)
-                  .setMediaSourceFactory(asset.getMediaSourceFactory(context));
+          ExoPlayer.Builder builder = new ExoPlayer.Builder(context)
+              .setTrackSelector(trackSelector);
+          if (asset != null) {
+            builder.setMediaSourceFactory(asset.getMediaSourceFactory(context));
+          }
           return builder.build();
         });
   }
@@ -71,7 +72,7 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
   public TextureVideoPlayer(
       @NonNull VideoPlayerCallbacks events,
       @NonNull SurfaceProducer surfaceProducer,
-      @NonNull MediaItem mediaItem,
+      @Nullable MediaItem mediaItem,
       @NonNull VideoPlayerOptions options,
       @NonNull ExoPlayerProvider exoPlayerProvider) {
     super(events, mediaItem, options, surfaceProducer, exoPlayerProvider);

@@ -270,7 +270,7 @@ class MiniController extends ValueNotifier<VideoPlayerValue> {
 
     void eventListener(VideoEvent event) {
       switch (event.eventType) {
-        case VideoEventType.initialized:
+        case VideoEventType.isPlaybackInfoUpdate:
           value = value.copyWith(
             duration: event.duration,
             rotationCorrection: event.rotationCorrection,

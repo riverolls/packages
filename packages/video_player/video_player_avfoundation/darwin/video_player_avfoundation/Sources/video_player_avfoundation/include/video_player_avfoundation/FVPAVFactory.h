@@ -11,7 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol FVPAVFactory
 /// Creates and returns an AVPlayer instance with the specified AVPlayerItem.
 @required
-- (AVPlayer *)playerWithPlayerItem:(AVPlayerItem *)playerItem;
+- (AVPlayer *)playerWithPlayerItem:(nullable AVPlayerItem *)playerItem;
 
 /// Creates and returns an AVPlayerItemVideoOutput instance with the specified pixel buffer
 /// attributes.

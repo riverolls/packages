@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -50,7 +52,7 @@ abstract class VideoPlayerPlatform extends PlatformInterface {
 
   /// Creates an instance of a video player and returns its playerId.
   @Deprecated('Use createWithOptions() instead.')
-  Future<int?> create(DataSource dataSource) {
+  Future<int?> create([DataSource? dataSource]) {
     throw UnimplementedError('create() has not been implemented.');
   }
 
@@ -70,9 +72,19 @@ abstract class VideoPlayerPlatform extends PlatformInterface {
     throw UnimplementedError('setLooping() has not been implemented.');
   }
 
+  /// Set new play data source(Keep previous playback status).
+  Future<void> setDataSource(int playerId, DataSource source) {
+    throw UnimplementedError('setDataSource() has not been implemented.');
+  }
+
   /// Starts the video playback.
   Future<void> play(int playerId) {
     throw UnimplementedError('play() has not been implemented.');
+  }
+
+  /// Stop playback (you need to set a new playback source through `setDataSource` later)
+  Future<void> stop(int playerId) {
+    throw UnimplementedError('stop() has not been implemented.');
   }
 
   /// Stops the video playback.
@@ -173,7 +185,7 @@ class DataSource {
   ///
   /// The [package] argument must be non-null when the asset comes from a
   /// package and null otherwise.
-  DataSource({
+  const DataSource({
     required this.sourceType,
     this.uri,
     this.formatHint,
@@ -181,6 +193,36 @@ class DataSource {
     this.package,
     this.httpHeaders = const <String, String>{},
   });
+
+  DataSource.file(File file, {this.httpHeaders = const <String, String>{}})
+    : uri = Uri.file(file.absolute.path).toString(),
+      asset = null,
+      package = null,
+      sourceType = DataSourceType.file,
+      formatHint = null;
+
+  DataSource.contentUri(Uri uri)
+    : uri = uri.toString(),
+      asset = null,
+      package = null,
+      sourceType = DataSourceType.contentUri,
+      formatHint = null,
+      httpHeaders = const <String, String>{};
+
+  const DataSource.asset(this.asset, {this.package})
+    : uri = null,
+      sourceType = DataSourceType.asset,
+      formatHint = null,
+      httpHeaders = const <String, String>{};
+
+  const DataSource.network(
+    String url, {
+    this.formatHint,
+    this.httpHeaders = const <String, String>{},
+  }) : uri = url,
+       asset = null,
+       sourceType = DataSourceType.network,
+       package = null;
 
   /// The way in which the video was originally loaded.
   ///
@@ -201,7 +243,7 @@ class DataSource {
   /// HTTP headers used for the request to the [uri].
   /// Only for [DataSourceType.network] videos.
   /// Always empty for other video types.
-  Map<String, String> httpHeaders;
+  final Map<String, String> httpHeaders;
 
   /// The name of the asset. Only set for [DataSourceType.asset] videos.
   final String? asset;
@@ -209,6 +251,9 @@ class DataSource {
   /// The package that the asset was loaded from. Only set for
   /// [DataSourceType.asset] videos.
   final String? package;
+
+  /// Get data source
+  String get source => asset ?? uri!;
 }
 
 /// The way in which the video was originally loaded.
@@ -332,10 +377,8 @@ class VideoEvent {
 /// Emitted by the platform implementation when the video is initialized or
 /// completed or to communicate buffering events or play state changed.
 enum VideoEventType {
-  /// The video has been initialized.
-  ///
-  /// A maximum of one event of this type may be emitted per instance.
-  initialized,
+  /// The playback info of the video has changed.
+  isPlaybackInfoUpdate,
 
   /// The playback has ended.
   completed,
@@ -556,7 +599,7 @@ class VideoCreationOptions {
   });
 
   /// The data source used to create the player.
-  final DataSource dataSource;
+  final DataSource? dataSource;
 
   /// The type of view to be used for displaying the video player
   final VideoViewType viewType;

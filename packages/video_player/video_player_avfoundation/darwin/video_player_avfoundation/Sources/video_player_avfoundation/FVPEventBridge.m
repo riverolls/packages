@@ -70,9 +70,9 @@
 
 #pragma mark FVPVideoEventListener
 
-- (void)videoPlayerDidInitializeWithDuration:(int64_t)duration size:(CGSize)size {
+- (void)videoPlayerDidInfoChangeWithDuration:(int64_t)duration size:(CGSize)size {
   [self sendOrQueue:@{
-    @"event" : @"initialized",
+    @"event" : @"playbackInfoChanged",
     @"duration" : @(duration),
     @"width" : @(size.width),
     @"height" : @(size.height)
