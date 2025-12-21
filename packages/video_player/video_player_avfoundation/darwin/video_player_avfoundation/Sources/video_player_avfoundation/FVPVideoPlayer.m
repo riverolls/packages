@@ -8,6 +8,7 @@
 #import <GLKit/GLKit.h>
 
 #import "./include/video_player_avfoundation/AVAssetTrackUtils.h"
+#import "./include/video_player_avfoundation/FVPVideoPlayerPlugin.h"
 
 static void *timeRangeContext = &timeRangeContext;
 static void *statusContext = &statusContext;
@@ -71,46 +72,13 @@ static NSDictionary<NSString *, NSValue *> *FVPGetPlayerItemObservations(void) {
   BOOL _listenersRegistered;
 }
 
-- (instancetype)initWithPlayerItem:(AVPlayerItem *)item
+- (instancetype)initWithPlayerItem:(nullable AVPlayerItem *)item
                          avFactory:(id<FVPAVFactory>)avFactory
                       viewProvider:(NSObject<FVPViewProvider> *)viewProvider {
   self = [super init];
   NSAssert(self, @"super init cannot be nil");
 
   _viewProvider = viewProvider;
-
-  AVAsset *asset = [item asset];
-  void (^assetCompletionHandler)(void) = ^{
-    if ([asset statusOfValueForKey:@"tracks" error:nil] == AVKeyValueStatusLoaded) {
-      NSArray *tracks = [asset tracksWithMediaType:AVMediaTypeVideo];
-      if ([tracks count] > 0) {
-        AVAssetTrack *videoTrack = tracks[0];
-        void (^trackCompletionHandler)(void) = ^{
-          if (self->_disposed) return;
-          if ([videoTrack statusOfValueForKey:@"preferredTransform"
-                                        error:nil] == AVKeyValueStatusLoaded) {
-            // Rotate the video by using a videoComposition and the preferredTransform
-            self->_preferredTransform = FVPGetStandardizedTransformForTrack(videoTrack);
-            // Do not use video composition when it is not needed.
-            if (CGAffineTransformIsIdentity(self->_preferredTransform)) {
-              return;
-            }
-            // Note:
-            // https://developer.apple.com/documentation/avfoundation/avplayeritem/1388818-videocomposition
-            // Video composition can only be used with file-based media and is not supported for
-            // use with media served using HTTP Live Streaming.
-            AVMutableVideoComposition *videoComposition =
-                [self getVideoCompositionWithTransform:self->_preferredTransform
-                                             withAsset:asset
-                                        withVideoTrack:videoTrack];
-            item.videoComposition = videoComposition;
-          }
-        };
-        [videoTrack loadValuesAsynchronouslyForKeys:@[ @"preferredTransform" ]
-                                  completionHandler:trackCompletionHandler];
-      }
-    }
-  };
 
   _player = [avFactory playerWithPlayerItem:item];
   _player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
@@ -121,8 +89,6 @@ static NSDictionary<NSString *, NSValue *> *FVPGetPlayerItemObservations(void) {
     (id)kCVPixelBufferIOSurfacePropertiesKey : @{}
   };
   _videoOutput = [avFactory videoOutputWithPixelBufferAttributes:pixBuffAttributes];
-
-  [asset loadValuesAsynchronouslyForKeys:@[ @"tracks" ] completionHandler:assetCompletionHandler];
 
   return self;
 }
@@ -161,16 +127,8 @@ static NSDictionary<NSString *, NSValue *> *FVPGetPlayerItemObservations(void) {
   // The first time an event listener is set, set up video event listeners to relay status changes
   // changes to the event listener.
   if (eventListener && !_listenersRegistered) {
-    AVPlayerItem *item = self.player.currentItem;
-    // If the item is already ready to play, ensure that the intialized event is sent first.
-    [self reportStatusForPlayerItem:item];
-    // Set up all necessary observers to report video events.
-    FVPRegisterKeyValueObservers(self, FVPGetPlayerItemObservations(), item);
+    [self setupItem:self.player.currentItem];
     FVPRegisterKeyValueObservers(self, FVPGetPlayerObservations(), _player);
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(itemDidPlayToEndTime:)
-                                                 name:AVPlayerItemDidPlayToEndTimeNotification
-                                               object:item];
     _listenersRegistered = YES;
   }
 }
@@ -285,11 +243,15 @@ NS_INLINE CGFloat radiansToDegrees(CGFloat radians) {
     case AVPlayerItemStatusUnknown:
       break;
     case AVPlayerItemStatusReadyToPlay:
-      if (!_isInitialized) {
+      if (![[item outputs] containsObject:_videoOutput]) {
         [item addOutput:_videoOutput];
-        [self reportInitialized];
-        [self updatePlayingState];
       }
+      if (!_isInitialized) {
+        [self reportInitialized];
+      } else {
+        [self reportPlaybackInfoChanged];
+      }
+      [self updatePlayingState];
       break;
   }
 }
@@ -373,6 +335,15 @@ NS_INLINE CGFloat radiansToDegrees(CGFloat radians) {
                                                       size:currentItem.presentationSize];
 }
 
+- (void)reportPlaybackInfoChanged {
+  AVPlayerItem *currentItem = self.player.currentItem;
+  NSAssert(currentItem.status == AVPlayerItemStatusReadyToPlay,
+           @"reportPlaybackInfoChangedIfReadyToPlay was called when the item wasn't ready to play.");
+
+  [self.eventListener videoPlayerDidInfoChangeWithDuration:self.duration
+                                                      size:currentItem.presentationSize];
+}
+
 #pragma mark - FVPVideoPlayerInstanceApi
 
 - (void)playWithError:(FlutterError *_Nullable *_Nonnull)error {
@@ -406,6 +377,89 @@ NS_INLINE CGFloat radiansToDegrees(CGFloat radians) {
           });
         }
       }];
+}
+
+- (void)clearItem {
+  AVPlayerItem* item = _player.currentItem;
+  if(item == nil) {
+    return;
+  }
+  if (_listenersRegistered) {
+    FVPRemoveKeyValueObservers(self, FVPGetPlayerItemObservations(), item);
+    [[NSNotificationCenter defaultCenter] removeObserver:item];
+  }
+  [item removeOutput:_videoOutput];
+  [self.player replaceCurrentItemWithPlayerItem:nil];
+}
+
+- (void)setupItem:(nullable AVPlayerItem*)item {
+  // The item passed through initialization will be set to the player first.
+  // If it already exists, it will no longer be clear.
+  if (item != _player.currentItem) {
+    [self clearItem];
+  }
+  if (item == nil) {
+    return;
+  }
+  
+  [_player replaceCurrentItemWithPlayerItem:item];
+  
+  AVAsset *asset = [item asset];
+  void (^assetCompletionHandler)(void) = ^{
+    if ([asset statusOfValueForKey:@"tracks" error:nil] == AVKeyValueStatusLoaded) {
+      NSArray *tracks = [asset tracksWithMediaType:AVMediaTypeVideo];
+      if ([tracks count] > 0) {
+        AVAssetTrack *videoTrack = tracks[0];
+        void (^trackCompletionHandler)(void) = ^{
+          if (self->_disposed) return;
+          if ([videoTrack statusOfValueForKey:@"preferredTransform"
+                                        error:nil] == AVKeyValueStatusLoaded) {
+            // Rotate the video by using a videoComposition and the preferredTransform
+            self->_preferredTransform = FVPGetStandardizedTransformForTrack(videoTrack);
+            // Do not use video composition when it is not needed.
+            if (CGAffineTransformIsIdentity(self->_preferredTransform)) {
+              return;
+            }
+            // Note:
+            // https://developer.apple.com/documentation/avfoundation/avplayeritem/1388818-videocomposition
+            // Video composition can only be used with file-based media and is not supported for
+            // use with media served using HTTP Live Streaming.
+            AVMutableVideoComposition *videoComposition =
+                [self getVideoCompositionWithTransform:self->_preferredTransform
+                                             withAsset:asset
+                                        withVideoTrack:videoTrack];
+            item.videoComposition = videoComposition;
+          }
+        };
+        [videoTrack loadValuesAsynchronouslyForKeys:@[ @"preferredTransform" ]
+                                  completionHandler:trackCompletionHandler];
+      }
+    }
+  };
+  
+  [asset loadValuesAsynchronouslyForKeys:@[ @"tracks" ] completionHandler:assetCompletionHandler];
+  
+  // If the item is already ready to play, ensure that the intialized event is sent first.
+  [self reportStatusForPlayerItem:item];
+  // Set up all necessary observers to report video events.
+  FVPRegisterKeyValueObservers(self, FVPGetPlayerItemObservations(), item);
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(itemDidPlayToEndTime:)
+                                               name:AVPlayerItemDidPlayToEndTimeNotification
+                                             object:item];
+}
+
+- (void)setDataSource:(FVPCreationOptions *)options error:(FlutterError * _Nullable __autoreleasing *)error {
+  AVPlayerItem *item = [FVPVideoPlayerPlugin playerItemWithCreationOptions:options];
+  [self setupItem:item];
+}
+
+- (void)stopWithError:(FlutterError *_Nullable *_Nonnull)error {
+  if (!_isInitialized) {
+    return;
+  }
+  [self pauseWithError:error];
+  [self clearItem];
 }
 
 - (void)setLooping:(BOOL)looping error:(FlutterError *_Nullable *_Nonnull)error {

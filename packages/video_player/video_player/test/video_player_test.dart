@@ -30,7 +30,7 @@ class FakeController extends ValueNotifier<VideoPlayerValue>
   int playerId = VideoPlayerController.kUninitializedPlayerId;
 
   @override
-  String get dataSource => '';
+  String? get dataSource => '';
 
   @override
   Map<String, String> get httpHeaders => <String, String>{};
@@ -84,6 +84,12 @@ class FakeController extends ValueNotifier<VideoPlayerValue>
   Future<void> setClosedCaptionFile(
     Future<ClosedCaptionFile>? closedCaptionFile,
   ) async {}
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> setDataSource(DataSource source) async {}
 }
 
 Future<ClosedCaptionFile> _loadClosedCaption() async =>
@@ -1208,6 +1214,7 @@ void main() {
         DurationRange(Duration.zero, const Duration(seconds: 4)),
       ];
       const isInitialized = true;
+      const isDataSourceAvailable = true;
       const isPlaying = true;
       const isLooping = true;
       const isBuffering = true;
@@ -1222,6 +1229,7 @@ void main() {
         captionOffset: captionOffset,
         buffered: buffered,
         isInitialized: isInitialized,
+        isDataSourceAvailable: isDataSourceAvailable,
         isPlaying: isPlaying,
         isLooping: isLooping,
         isBuffering: isBuffering,
@@ -1238,6 +1246,7 @@ void main() {
         'captionOffset: 0:00:00.250000, '
         'buffered: [DurationRange(start: 0:00:00.000000, end: 0:00:04.000000)], '
         'isInitialized: true, '
+        'isDataSourceAvailable: true, '
         'isPlaying: true, '
         'isLooping: true, '
         'isBuffering: true, '
@@ -1502,7 +1511,7 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
       <int, VideoPlayerWebOptions>{};
 
   @override
-  Future<int?> create(DataSource dataSource) async {
+  Future<int?> create([DataSource? dataSource]) async {
     calls.add('create');
     final stream = StreamController<VideoEvent>();
     streams[nextPlayerId] = stream;
@@ -1522,7 +1531,9 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
         ),
       );
     }
-    dataSources.add(dataSource);
+    if (dataSource != null) {
+      dataSources.add(dataSource);
+    }
     return nextPlayerId++;
   }
 
@@ -1547,7 +1558,9 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
         ),
       );
     }
-    dataSources.add(options.dataSource);
+    if (options.dataSource != null) {
+      dataSources.add(options.dataSource!);
+    }
     viewTypes.add(options.viewType);
     return nextPlayerId++;
   }
@@ -1576,6 +1589,11 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   @override
   Future<void> play(int playerId) async {
     calls.add('play');
+  }
+
+  @override
+  Future<void> stop(int playerId) async {
+    calls.add('stop');
   }
 
   @override

@@ -28,7 +28,7 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
   @VisibleForTesting
   public PlatformViewVideoPlayer(
       @NonNull VideoPlayerCallbacks events,
-      @NonNull MediaItem mediaItem,
+      @Nullable MediaItem mediaItem,
       @NonNull VideoPlayerOptions options,
       @NonNull ExoPlayerProvider exoPlayerProvider) {
     super(events, mediaItem, options, /* surfaceProducer */ null, exoPlayerProvider);
@@ -49,19 +49,20 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
   public static PlatformViewVideoPlayer create(
       @NonNull Context context,
       @NonNull VideoPlayerCallbacks events,
-      @NonNull VideoAsset asset,
+      @Nullable VideoAsset asset,
       @NonNull VideoPlayerOptions options) {
     return new PlatformViewVideoPlayer(
         events,
-        asset.getMediaItem(),
+        asset != null ? asset.getMediaItem() : null,
         options,
         () -> {
           androidx.media3.exoplayer.trackselection.DefaultTrackSelector trackSelector =
               new androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context);
-          ExoPlayer.Builder builder =
-              new ExoPlayer.Builder(context)
-                  .setTrackSelector(trackSelector)
-                  .setMediaSourceFactory(asset.getMediaSourceFactory(context));
+          ExoPlayer.Builder builder = new ExoPlayer.Builder(context)
+              .setTrackSelector(trackSelector);
+          if (asset != null) {
+            builder.setMediaSourceFactory(asset.getMediaSourceFactory(context));
+          }
           return builder.build();
         });
   }

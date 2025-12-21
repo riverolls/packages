@@ -22,6 +22,15 @@ public final class PlatformViewExoPlayerEventListener extends ExoPlayerEventList
   @OptIn(markerClass = UnstableApi.class)
   @Override
   protected void sendInitialized() {
+    events.onInitialized(createPlaybackInfo());
+  }
+
+  @Override
+  protected void sendPlaybackInfo() {
+    events.onPlaybackInfoChanged(createPlaybackInfo());
+  }
+
+  private VideoPlayerCallbacks.PlaybackInfo createPlaybackInfo() {
     // We can't rely on VideoSize here, because at this point it is not available - the platform
     // view was not created yet. We use the video format instead.
     Format videoFormat = exoPlayer.getVideoFormat();
@@ -39,7 +48,7 @@ public final class PlatformViewExoPlayerEventListener extends ExoPlayerEventList
 
       rotationCorrection = RotationDegrees.fromDegrees(0);
     }
-
-    events.onInitialized(width, height, exoPlayer.getDuration(), rotationCorrection.getDegrees());
+    return new VideoPlayerCallbacks.PlaybackInfo(
+        width, height, exoPlayer.getDuration(), rotationCorrection.getDegrees());
   }
 }

@@ -37,6 +37,21 @@ class InitializationEvent extends PlatformVideoEvent {
   late final int rotationCorrection;
 }
 
+/// Sent when the video info changes.
+class PlaybackInfoChangeEvent extends PlatformVideoEvent {
+  /// The video duration in milliseconds.
+  late final int duration;
+
+  /// The width of the video in pixels.
+  late final int width;
+
+  /// The height of the video in pixels.
+  late final int height;
+
+  /// The rotation that should be applied during playback.
+  late final int rotationCorrection;
+}
+
 /// Sent when the video state changes.
 ///
 /// Corresponds to ExoPlayer's onPlaybackStateChanged.
@@ -69,6 +84,7 @@ class PlatformVideoViewCreationParams {
 
 class CreationOptions {
   CreationOptions({required this.uri, required this.httpHeaders});
+
   String uri;
   PlatformVideoFormat? formatHint;
   Map<String, String> httpHeaders;
@@ -151,18 +167,26 @@ class NativeAudioTrackData {
 @HostApi()
 abstract class AndroidVideoPlayerApi {
   void initialize();
+
   // Creates a new player using a platform view for rendering and returns its
   // ID.
-  int createForPlatformView(CreationOptions options);
+  int createForPlatformView([CreationOptions? options]);
+
   // Creates a new player using a texture for rendering and returns its IDs.
-  TexturePlayerIds createForTextureView(CreationOptions options);
+  TexturePlayerIds createForTextureView([CreationOptions? options]);
+
   void dispose(int playerId);
+
   void setMixWithOthers(bool mixWithOthers);
+
   String getLookupKeyForAsset(String asset, String? packageName);
 }
 
 @HostApi()
 abstract class VideoPlayerInstanceApi {
+  /// Set new play data source.
+  void setDataSource(CreationOptions options);
+
   /// Sets whether to automatically loop playback of the video.
   void setLooping(bool looping);
 
@@ -177,6 +201,9 @@ abstract class VideoPlayerInstanceApi {
 
   /// Pauses playback if the video is currently playing.
   void pause();
+
+  /// Stop playback (you need to set a new playback source through `setDataSource` later)
+  void stop();
 
   /// Seeks to the given playback position, in milliseconds.
   void seekTo(int position);

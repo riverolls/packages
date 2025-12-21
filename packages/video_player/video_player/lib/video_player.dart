@@ -15,6 +15,7 @@ import 'src/closed_caption_file.dart';
 
 export 'package:video_player_platform_interface/video_player_platform_interface.dart'
     show
+        DataSource,
         DataSourceType,
         DurationRange,
         VideoFormat,
@@ -52,6 +53,7 @@ class VideoPlayerValue {
     this.captionOffset = Duration.zero,
     this.buffered = const <DurationRange>[],
     this.isInitialized = false,
+    this.isDataSourceAvailable = false,
     this.isPlaying = false,
     this.isLooping = false,
     this.isBuffering = false,
@@ -135,6 +137,9 @@ class VideoPlayerValue {
   /// Indicates whether or not the video has been loaded and is ready to play.
   final bool isInitialized;
 
+  /// Indicates whether or not the data source has been loaded and is ready to play.
+  final bool isDataSourceAvailable;
+
   /// Indicates whether or not the video is in an error state. If this is true
   /// [errorDescription] should have information about the problem.
   bool get hasError => errorDescription != null;
@@ -166,6 +171,7 @@ class VideoPlayerValue {
     Duration? captionOffset,
     List<DurationRange>? buffered,
     bool? isInitialized,
+    bool? isDataSourceAvailable,
     bool? isPlaying,
     bool? isLooping,
     bool? isBuffering,
@@ -183,6 +189,8 @@ class VideoPlayerValue {
       captionOffset: captionOffset ?? this.captionOffset,
       buffered: buffered ?? this.buffered,
       isInitialized: isInitialized ?? this.isInitialized,
+      isDataSourceAvailable:
+          isDataSourceAvailable ?? this.isDataSourceAvailable,
       isPlaying: isPlaying ?? this.isPlaying,
       isLooping: isLooping ?? this.isLooping,
       isBuffering: isBuffering ?? this.isBuffering,
@@ -206,6 +214,7 @@ class VideoPlayerValue {
         'captionOffset: $captionOffset, '
         'buffered: [${buffered.join(', ')}], '
         'isInitialized: $isInitialized, '
+        'isDataSourceAvailable: $isDataSourceAvailable, '
         'isPlaying: $isPlaying, '
         'isLooping: $isLooping, '
         'isBuffering: $isBuffering, '
@@ -267,6 +276,18 @@ class VideoPlayerValue {
 ///
 /// After [dispose] all further calls are ignored.
 class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
+  /// Constructs a [VideoPlayerController] playing a video.
+  ///
+  /// The playback source needs to be set through [setDataSource].
+  VideoPlayerController({
+    DataSource? dataSource,
+    Future<ClosedCaptionFile>? closedCaptionFile,
+    this.videoPlayerOptions,
+    this.viewType = VideoViewType.textureView,
+  }) : _closedCaptionFileFuture = closedCaptionFile,
+       _dataSource = dataSource,
+       super(const VideoPlayerValue(duration: Duration.zero));
+
   /// Constructs a [VideoPlayerController] playing a video from an asset.
   ///
   /// The name of the asset is given by the [dataSource] argument and must not be
@@ -277,15 +298,13 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   /// for the video. Platforms that do not support the request view type will
   /// ignore this parameter.
   VideoPlayerController.asset(
-    this.dataSource, {
-    this.package,
+    String asset, {
+    String? package,
     Future<ClosedCaptionFile>? closedCaptionFile,
     this.videoPlayerOptions,
     this.viewType = VideoViewType.textureView,
   }) : _closedCaptionFileFuture = closedCaptionFile,
-       dataSourceType = DataSourceType.asset,
-       formatHint = null,
-       httpHeaders = const <String, String>{},
+       _dataSource = DataSource.asset(asset, package: package),
        super(const VideoPlayerValue(duration: Duration.zero));
 
   /// Constructs a [VideoPlayerController] playing a network video.
@@ -303,37 +322,42 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   /// for the request to the [dataSource].
   @Deprecated('Use VideoPlayerController.networkUrl instead')
   VideoPlayerController.network(
-    this.dataSource, {
-    this.formatHint,
+    String url, {
+    VideoFormat? formatHint,
     Future<ClosedCaptionFile>? closedCaptionFile,
+    Map<String, String> httpHeaders = const <String, String>{},
     this.videoPlayerOptions,
-    this.httpHeaders = const <String, String>{},
     this.viewType = VideoViewType.textureView,
   }) : _closedCaptionFileFuture = closedCaptionFile,
-       dataSourceType = DataSourceType.network,
-       package = null,
+       _dataSource = DataSource.network(
+         url,
+         formatHint: formatHint,
+         httpHeaders: httpHeaders,
+       ),
        super(const VideoPlayerValue(duration: Duration.zero));
 
   /// Constructs a [VideoPlayerController] playing a network video.
   ///
-  /// The URI for the video is given by the [dataSource] argument.
+  /// The URI for the video is given by the [_dataSource] argument.
   ///
   /// **Android only**: The [formatHint] option allows the caller to override
   /// the video format detection code.
   ///
   /// [httpHeaders] option allows to specify HTTP headers
-  /// for the request to the [dataSource].
+  /// for the request to the [_dataSource].
   VideoPlayerController.networkUrl(
     Uri url, {
-    this.formatHint,
+    VideoFormat? formatHint,
     Future<ClosedCaptionFile>? closedCaptionFile,
+    Map<String, String> httpHeaders = const <String, String>{},
     this.videoPlayerOptions,
-    this.httpHeaders = const <String, String>{},
     this.viewType = VideoViewType.textureView,
   }) : _closedCaptionFileFuture = closedCaptionFile,
-       dataSource = url.toString(),
-       dataSourceType = DataSourceType.network,
-       package = null,
+       _dataSource = DataSource.network(
+         url.toString(),
+         formatHint: formatHint,
+         httpHeaders: httpHeaders,
+       ),
        super(const VideoPlayerValue(duration: Duration.zero));
 
   /// Constructs a [VideoPlayerController] playing a video from a file.
@@ -343,14 +367,11 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   VideoPlayerController.file(
     File file, {
     Future<ClosedCaptionFile>? closedCaptionFile,
+    Map<String, String> httpHeaders = const <String, String>{},
     this.videoPlayerOptions,
-    this.httpHeaders = const <String, String>{},
     this.viewType = VideoViewType.textureView,
   }) : _closedCaptionFileFuture = closedCaptionFile,
-       dataSource = Uri.file(file.absolute.path).toString(),
-       dataSourceType = DataSourceType.file,
-       package = null,
-       formatHint = null,
+       _dataSource = DataSource.file(file, httpHeaders: httpHeaders),
        super(const VideoPlayerValue(duration: Duration.zero));
 
   /// Constructs a [VideoPlayerController] playing a video from a contentUri.
@@ -367,35 +388,32 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
          'VideoPlayerController.contentUri is only supported on Android.',
        ),
        _closedCaptionFileFuture = closedCaptionFile,
-       dataSource = contentUri.toString(),
-       dataSourceType = DataSourceType.contentUri,
-       package = null,
-       formatHint = null,
-       httpHeaders = const <String, String>{},
+       _dataSource = DataSource.contentUri(contentUri),
        super(const VideoPlayerValue(duration: Duration.zero));
 
   /// The URI to the video file. This will be in different formats depending on
   /// the [DataSourceType] of the original video.
-  final String dataSource;
+  String? get dataSource => _dataSource?.source;
+  DataSource? _dataSource;
 
-  /// HTTP headers used for the request to the [dataSource].
+  /// HTTP headers used for the request to the [_dataSource].
   /// Only for [VideoPlayerController.network].
   /// Always empty for other video types.
-  final Map<String, String> httpHeaders;
+  Map<String, String>? get httpHeaders => _dataSource?.httpHeaders;
 
   /// **Android only**. Will override the platform's generic file format
   /// detection with whatever is set here.
-  final VideoFormat? formatHint;
+  VideoFormat? get formatHint => _dataSource?.formatHint;
 
   /// Describes the type of data source this [VideoPlayerController]
   /// is constructed with.
-  final DataSourceType dataSourceType;
+  DataSourceType? get dataSourceType => _dataSource?.sourceType;
 
   /// Provide additional configuration options (optional). Like setting the audio mode to mix
   final VideoPlayerOptions? videoPlayerOptions;
 
   /// Only set for [asset] videos. The package that the asset was loaded from.
-  final String? package;
+  String? get package => _dataSource?.package;
 
   /// The requested display mode for the video.
   ///
@@ -420,7 +438,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   @visibleForTesting
   int get playerId => _playerId;
 
-  /// Attempts to open the given [dataSource] and load metadata about the video.
+  /// Attempts to open the given [_dataSource] and load metadata about the video.
   Future<void> initialize() async {
     final bool allowBackgroundPlayback =
         videoPlayerOptions?.allowBackgroundPlayback ?? false;
@@ -430,36 +448,8 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
     _lifeCycleObserver?.initialize();
     _creatingCompleter = Completer<void>();
 
-    final DataSource dataSourceDescription;
-    switch (dataSourceType) {
-      case DataSourceType.asset:
-        dataSourceDescription = DataSource(
-          sourceType: DataSourceType.asset,
-          asset: dataSource,
-          package: package,
-        );
-      case DataSourceType.network:
-        dataSourceDescription = DataSource(
-          sourceType: DataSourceType.network,
-          uri: dataSource,
-          formatHint: formatHint,
-          httpHeaders: httpHeaders,
-        );
-      case DataSourceType.file:
-        dataSourceDescription = DataSource(
-          sourceType: DataSourceType.file,
-          uri: dataSource,
-          httpHeaders: httpHeaders,
-        );
-      case DataSourceType.contentUri:
-        dataSourceDescription = DataSource(
-          sourceType: DataSourceType.contentUri,
-          uri: dataSource,
-        );
-    }
-
     final creationOptions = VideoCreationOptions(
-      dataSource: dataSourceDescription,
+      dataSource: _dataSource,
       viewType: viewType,
     );
 
@@ -495,6 +485,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
             size: event.size,
             rotationCorrection: event.rotationCorrection,
             isInitialized: event.duration != null,
+            isDataSourceAvailable: event.duration != null,
             errorDescription: null,
             isCompleted: false,
           );
@@ -512,6 +503,18 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
           _applyLooping();
           _applyVolume();
           _applyPlayPause();
+        case VideoEventType.isPlayingInfoUpdate:
+          value = value.copyWith(
+            duration: event.duration,
+            size: event.size,
+            rotationCorrection: event.rotationCorrection,
+            isInitialized: event.duration != null,
+            isDataSourceAvailable: event.duration != null,
+            errorDescription: null,
+            position: Duration.zero,
+            caption: _getCaptionAt(Duration.zero),
+            isCompleted: false,
+          );
         case VideoEventType.completed:
           // In this case we need to stop _timer, set isPlaying=false, and
           // position=value.duration. Instead of setting the values directly,
@@ -578,6 +581,19 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
     super.dispose();
   }
 
+  /// Set new play data source.
+  ///
+  /// If the current status is playing, by default it will automatically start
+  /// playing when it is ready. If you do not need this behavior, please call
+  /// [pause] first.
+  Future<void> setDataSource(DataSource source) async {
+    if (_isDisposed) {
+      return;
+    }
+    _dataSource = source;
+    return _videoPlayerPlatform.setDataSource(playerId, source);
+  }
+
   /// Starts playing the video.
   ///
   /// If the video is at the end, this method starts playing from the beginning.
@@ -604,6 +620,25 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   Future<void> pause() async {
     value = value.copyWith(isPlaying: false);
     await _applyPlayPause();
+  }
+
+  /// Stop the video.
+  ///
+  /// The player will release the current playback data source and is in the
+  /// IDLE state. You need to pass [setDataSource] to continue working.
+  Future<void> stop() async {
+    if (_isDisposedOrNotInitialized) {
+      return;
+    }
+    value = value.copyWith(
+      isPlaying: false,
+      isDataSourceAvailable: false,
+      duration: Duration.zero,
+      size: Size.zero,
+      caption: Caption.none,
+    );
+    await _applyPlayPause();
+    await _videoPlayerPlatform.stop(playerId);
   }
 
   Future<void> _applyLooping() async {
@@ -864,6 +899,7 @@ class VideoPlayer extends StatefulWidget {
 
 class _VideoPlayerState extends State<VideoPlayer> {
   late int _playerId;
+
   void _controllerDidUpdateValue() {
     final int newPlayerId = widget.controller.playerId;
     if (newPlayerId != _playerId) {

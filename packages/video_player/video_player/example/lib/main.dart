@@ -226,10 +226,7 @@ class _ButterFlyAssetVideoState extends State<_ButterFlyAssetVideo> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(
-      'assets/Butterfly-209.mp4',
-      viewType: widget.viewType,
-    );
+    _controller = VideoPlayerController(viewType: widget.viewType);
 
     _controller.addListener(() {
       setState(() {});
@@ -265,6 +262,32 @@ class _ButterFlyAssetVideoState extends State<_ButterFlyAssetVideo> {
                 ],
               ),
             ),
+          ),
+          Wrap(
+            children: [
+              TextButton(
+                onPressed: () async {
+                  const source = DataSource.asset('assets/Butterfly-209.mp4');
+                  await _controller.setDataSource(source);
+                },
+                child: const Text('Butterfly'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  const source = DataSource.network(
+                    'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
+                  );
+                  await _controller.setDataSource(source);
+                },
+                child: const Text('Bee'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  await _controller.stop();
+                },
+                child: const Text('Stop'),
+              ),
+            ],
           ),
         ],
       ),

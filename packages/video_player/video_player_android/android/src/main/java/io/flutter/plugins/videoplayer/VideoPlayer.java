@@ -20,9 +20,13 @@ import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
-import io.flutter.view.TextureRegistry.SurfaceProducer;
+
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import io.flutter.view.TextureRegistry.SurfaceProducer;
 
 /**
  * A class responsible for managing video playback using {@link ExoPlayer}.
@@ -60,7 +64,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   @SuppressWarnings("this-escape")
   public VideoPlayer(
       @NonNull VideoPlayerCallbacks events,
-      @NonNull MediaItem mediaItem,
+      @Nullable MediaItem mediaItem,
       @NonNull VideoPlayerOptions options,
       @Nullable SurfaceProducer surfaceProducer,
       @NonNull ExoPlayerProvider exoPlayerProvider) {
@@ -73,8 +77,10 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
       trackSelector = (DefaultTrackSelector) exoPlayer.getTrackSelector();
     }
 
-    exoPlayer.setMediaItem(mediaItem);
-    exoPlayer.prepare();
+    if (mediaItem != null) {
+      exoPlayer.setMediaItem(mediaItem);
+      exoPlayer.prepare();
+    }
     exoPlayer.addListener(createExoPlayerEventListener(exoPlayer, surfaceProducer));
     setAudioAttributes(exoPlayer, options.mixWithOthers);
   }
@@ -94,6 +100,15 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   }
 
   @Override
+  public void setDataSource(@NotNull CreationOptions options) {
+    final VideoAsset videoAsset = VideoAsset.fromOptions(options);
+    assert videoAsset != null;
+    exoPlayer.stop();
+    exoPlayer.setMediaItem(videoAsset.getMediaItem());
+    exoPlayer.prepare();
+  }
+
+  @Override
   public void play() {
     exoPlayer.play();
   }
@@ -101,6 +116,11 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   @Override
   public void pause() {
     exoPlayer.pause();
+  }
+
+  @Override
+  public void stop() {
+    exoPlayer.stop();
   }
 
   @Override

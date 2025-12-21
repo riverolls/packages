@@ -50,6 +50,7 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
   }
 
   protected abstract void sendInitialized();
+  protected abstract void sendPlaybackInfo();
 
   @Override
   public void onPlaybackStateChanged(final int playbackState) {
@@ -63,6 +64,8 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
         if (!isInitialized) {
           isInitialized = true;
           sendInitialized();
+        }else {
+          sendPlaybackInfo();
         }
         break;
       case Player.STATE_ENDED:

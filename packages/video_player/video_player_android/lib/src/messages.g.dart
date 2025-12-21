@@ -101,6 +101,62 @@ class InitializationEvent extends PlatformVideoEvent {
   int get hashCode => Object.hashAll(_toList());
 }
 
+/// Sent when the video info changes.
+class PlaybackInfoChangeEvent extends PlatformVideoEvent {
+  PlaybackInfoChangeEvent({
+    required this.duration,
+    required this.width,
+    required this.height,
+    required this.rotationCorrection,
+  });
+
+  /// The video duration in milliseconds.
+  int duration;
+
+  /// The width of the video in pixels.
+  int width;
+
+  /// The height of the video in pixels.
+  int height;
+
+  /// The rotation that should be applied during playback.
+  int rotationCorrection;
+
+  List<Object?> _toList() {
+    return <Object?>[duration, width, height, rotationCorrection];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static PlaybackInfoChangeEvent decode(Object result) {
+    result as List<Object?>;
+    return PlaybackInfoChangeEvent(
+      duration: result[0]! as int,
+      width: result[1]! as int,
+      height: result[2]! as int,
+      rotationCorrection: result[3]! as int,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! PlaybackInfoChangeEvent || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList());
+}
+
 /// Sent when the video state changes.
 ///
 /// Corresponds to ExoPlayer's onPlaybackStateChanged.
@@ -590,6 +646,7 @@ class NativeAudioTrackData {
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
+
   @override
   void writeValue(WriteBuffer buffer, Object? value) {
     if (value is int) {
@@ -604,35 +661,38 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is InitializationEvent) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    } else if (value is PlaybackStateChangeEvent) {
+    } else if (value is PlaybackInfoChangeEvent) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    } else if (value is IsPlayingStateEvent) {
+    } else if (value is PlaybackStateChangeEvent) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    } else if (value is AudioTrackChangedEvent) {
+    } else if (value is IsPlayingStateEvent) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    } else if (value is PlatformVideoViewCreationParams) {
+    } else if (value is AudioTrackChangedEvent) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    } else if (value is CreationOptions) {
+    } else if (value is PlatformVideoViewCreationParams) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    } else if (value is TexturePlayerIds) {
+    } else if (value is CreationOptions) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    } else if (value is PlaybackState) {
+    } else if (value is TexturePlayerIds) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    } else if (value is AudioTrackMessage) {
+    } else if (value is PlaybackState) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    } else if (value is ExoPlayerAudioTrackData) {
+    } else if (value is AudioTrackMessage) {
       buffer.putUint8(140);
       writeValue(buffer, value.encode());
-    } else if (value is NativeAudioTrackData) {
+    } else if (value is ExoPlayerAudioTrackData) {
       buffer.putUint8(141);
+      writeValue(buffer, value.encode());
+    } else if (value is NativeAudioTrackData) {
+      buffer.putUint8(142);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -651,24 +711,26 @@ class _PigeonCodec extends StandardMessageCodec {
       case 131:
         return InitializationEvent.decode(readValue(buffer)!);
       case 132:
-        return PlaybackStateChangeEvent.decode(readValue(buffer)!);
+        return PlaybackInfoChangeEvent.decode(readValue(buffer)!);
       case 133:
-        return IsPlayingStateEvent.decode(readValue(buffer)!);
+        return PlaybackStateChangeEvent.decode(readValue(buffer)!);
       case 134:
-        return AudioTrackChangedEvent.decode(readValue(buffer)!);
+        return IsPlayingStateEvent.decode(readValue(buffer)!);
       case 135:
-        return PlatformVideoViewCreationParams.decode(readValue(buffer)!);
+        return AudioTrackChangedEvent.decode(readValue(buffer)!);
       case 136:
-        return CreationOptions.decode(readValue(buffer)!);
+        return PlatformVideoViewCreationParams.decode(readValue(buffer)!);
       case 137:
-        return TexturePlayerIds.decode(readValue(buffer)!);
+        return CreationOptions.decode(readValue(buffer)!);
       case 138:
-        return PlaybackState.decode(readValue(buffer)!);
+        return TexturePlayerIds.decode(readValue(buffer)!);
       case 139:
-        return AudioTrackMessage.decode(readValue(buffer)!);
+        return PlaybackState.decode(readValue(buffer)!);
       case 140:
-        return ExoPlayerAudioTrackData.decode(readValue(buffer)!);
+        return AudioTrackMessage.decode(readValue(buffer)!);
       case 141:
+        return ExoPlayerAudioTrackData.decode(readValue(buffer)!);
+      case 142:
         return NativeAudioTrackData.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -722,7 +784,7 @@ class AndroidVideoPlayerApi {
     }
   }
 
-  Future<int> createForPlatformView(CreationOptions options) async {
+  Future<int> createForPlatformView([CreationOptions? options]) async {
     final String pigeonVar_channelName =
         'dev.flutter.pigeon.video_player_android.AndroidVideoPlayerApi.createForPlatformView$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel =
@@ -754,7 +816,9 @@ class AndroidVideoPlayerApi {
     }
   }
 
-  Future<TexturePlayerIds> createForTextureView(CreationOptions options) async {
+  Future<TexturePlayerIds> createForTextureView([
+    CreationOptions? options,
+  ]) async {
     final String pigeonVar_channelName =
         'dev.flutter.pigeon.video_player_android.AndroidVideoPlayerApi.createForTextureView$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel =
@@ -890,6 +954,34 @@ class VideoPlayerInstanceApi {
 
   final String pigeonVar_messageChannelSuffix;
 
+  /// Set new play data source.
+  Future<void> setDataSource(CreationOptions options) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.video_player_android.VideoPlayerInstanceApi.setDataSource$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[options],
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
+
   /// Sets whether to automatically loop playback of the video.
   Future<void> setLooping(bool looping) async {
     final String pigeonVar_channelName =
@@ -1004,6 +1096,32 @@ class VideoPlayerInstanceApi {
   Future<void> pause() async {
     final String pigeonVar_channelName =
         'dev.flutter.pigeon.video_player_android.VideoPlayerInstanceApi.pause$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
+
+  /// Stop playback (you need to set a new playback source through `setDataSource` later)
+  Future<void> stop() async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.video_player_android.VideoPlayerInstanceApi.stop$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel =
         BasicMessageChannel<Object?>(
           pigeonVar_channelName,

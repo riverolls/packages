@@ -66,9 +66,11 @@
 - (void)setTextureIdentifier:(int64_t)textureIdentifier {
   self.frameUpdater.textureIdentifier = textureIdentifier;
 
-  // Ensure that the first frame is drawn once available, even if the video isn't played, since
-  // the engine is now expecting the texture to be populated.
-  [self expectFrame];
+  if ([[super player] currentItem] != nil) {
+    // Ensure that the first frame is drawn once available, even if the video isn't played, since
+    // the engine is now expecting the texture to be populated.
+    [self expectFrame];
+  }
 }
 
 - (void)expectFrame {
@@ -104,6 +106,11 @@
           completion(error);
         }
       }];
+}
+
+- (void)setDataSource:(FVPCreationOptions *)options error:(FlutterError * _Nullable __autoreleasing *)error {
+  [super setDataSource:options error:error];
+  [self expectFrame];
 }
 
 - (void)disposeWithError:(FlutterError *_Nullable *_Nonnull)error {

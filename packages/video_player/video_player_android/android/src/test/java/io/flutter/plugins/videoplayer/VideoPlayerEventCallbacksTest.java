@@ -50,7 +50,7 @@ public final class VideoPlayerEventCallbacksTest {
     final int height = 600;
     final long duration = 10L;
     final int rotation = 180;
-    eventCallbacks.onInitialized(width, height, duration, rotation);
+    eventCallbacks.onInitialized(new VideoPlayerCallbacks.PlaybackInfo(width, height, duration, rotation));
 
     verify(mockEventSink).success(eventCaptor.capture());
 

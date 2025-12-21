@@ -51,6 +51,10 @@ public final class ExoPlayerEventListenerTest {
       calledSendInitialized = true;
     }
 
+    @Override
+    protected void sendPlaybackInfo() {
+    }
+
     boolean calledSendInitialized() {
       return calledSendInitialized;
     }

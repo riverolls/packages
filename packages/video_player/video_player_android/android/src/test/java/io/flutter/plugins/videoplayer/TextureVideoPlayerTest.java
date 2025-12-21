@@ -134,7 +134,7 @@ public final class TextureVideoPlayerTest {
 
     // Trigger an event that would trigger onInitialized.
     listener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockEvents).onInitialized(anyInt(), anyInt(), anyLong(), anyInt());
+    verify(mockEvents).onInitialized(new VideoPlayerCallbacks.PlaybackInfo(anyInt(), anyInt(), anyLong(), anyInt()));
 
     videoPlayer.dispose();
   }
@@ -158,14 +158,14 @@ public final class TextureVideoPlayerTest {
 
     // Trigger ready state, which should trigger initialization.
     listener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockEvents).onInitialized(anyInt(), anyInt(), anyLong(), anyInt());
+    verify(mockEvents).onInitialized(new VideoPlayerCallbacks.PlaybackInfo(anyInt(), anyInt(), anyLong(), anyInt()));
 
     // Trigger cleanup/available.
     producerLifecycle.onSurfaceCleanup();
     producerLifecycle.onSurfaceAvailable();
 
     // It should still only have been called the one time.
-    verify(mockEvents).onInitialized(anyInt(), anyInt(), anyLong(), anyInt());
+    verify(mockEvents).onInitialized(new VideoPlayerCallbacks.PlaybackInfo(anyInt(), anyInt(), anyLong(), anyInt()));
 
     videoPlayer.dispose();
   }

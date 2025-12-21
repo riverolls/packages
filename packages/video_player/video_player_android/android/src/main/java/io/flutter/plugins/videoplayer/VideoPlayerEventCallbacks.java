@@ -43,10 +43,21 @@ final class VideoPlayerEventCallbacks implements VideoPlayerCallbacks {
   }
 
   @Override
-  public void onInitialized(
-      int width, int height, long durationInMs, int rotationCorrectionInDegrees) {
+  public void onInitialized(PlaybackInfo info) {
     eventSink.success(
-        new InitializationEvent(durationInMs, width, height, rotationCorrectionInDegrees));
+      new InitializationEvent(
+        info.durationInMs(), info.width(), info.height(), info.rotationCorrectionInDegrees()
+      )
+    );
+  }
+
+  @Override
+  public void onPlaybackInfoChanged(PlaybackInfo info) {
+    eventSink.success(
+      new PlaybackInfoChangeEvent(
+        info.durationInMs(), info.width(), info.height(), info.rotationCorrectionInDegrees()
+      )
+    );
   }
 
   @Override

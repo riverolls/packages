@@ -79,6 +79,15 @@
   }];
 }
 
+- (void)videoPlayerDidInfoChangeWithDuration:(int64_t)duration size:(CGSize)size {
+  [self sendOrQueue:@{
+    @"event" : @"playbackInfoChanged",
+    @"duration" : @(duration),
+    @"width" : @(size.width),
+    @"height" : @(size.height)
+  }];
+}
+
 - (void)videoPlayerDidErrorWithMessage:(NSString *)errorMessage {
   [self sendOrQueue:[FlutterError errorWithCode:@"VideoError" message:errorMessage details:nil]];
 }

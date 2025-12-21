@@ -227,7 +227,8 @@ public final class VideoPlayerTest {
 
     // Trigger an event that would trigger onInitialized.
     listener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockEvents).onInitialized(anyInt(), anyInt(), anyLong(), anyInt());
+    verify(mockEvents).onInitialized(
+        new VideoPlayerCallbacks.PlaybackInfo(anyInt(), anyInt(), anyLong(), anyInt()));
 
     videoPlayer.dispose();
   }

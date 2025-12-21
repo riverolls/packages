@@ -17,7 +17,9 @@ import androidx.annotation.Nullable;
  * <p>See {@link androidx.media3.common.Player.Listener} for details.
  */
 public interface VideoPlayerCallbacks {
-  void onInitialized(int width, int height, long durationInMs, int rotationCorrectionInDegrees);
+  void onInitialized(PlaybackInfo info);
+
+  void onPlaybackInfoChanged(PlaybackInfo info);
 
   void onPlaybackStateChanged(@NonNull PlatformPlaybackState state);
 
@@ -26,4 +28,7 @@ public interface VideoPlayerCallbacks {
   void onIsPlayingStateUpdate(boolean isPlaying);
 
   void onAudioTrackChanged(@Nullable String selectedTrackId);
+
+  record PlaybackInfo(int width, int height, long durationInMs, int rotationCorrectionInDegrees) {
+  }
 }

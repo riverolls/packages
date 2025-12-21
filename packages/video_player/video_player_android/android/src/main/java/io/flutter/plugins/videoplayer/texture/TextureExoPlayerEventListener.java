@@ -26,6 +26,24 @@ public final class TextureExoPlayerEventListener extends ExoPlayerEventListener 
 
   @Override
   protected void sendInitialized() {
+    events.onInitialized(createPlaybackInfo());
+  }
+
+  @Override
+  protected void sendPlaybackInfo() {
+    events.onPlaybackInfoChanged(createPlaybackInfo());
+  }
+
+  @OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
+  // A video's Format and its rotation degrees are unstable because they are not guaranteed
+  // the same implementation across API versions. It is possible that this logic may need
+  // revisiting should the implementation change across versions of the Exoplayer API.
+  private int getRotationCorrectionFromFormat(ExoPlayer exoPlayer) {
+    Format videoFormat = Objects.requireNonNull(exoPlayer.getVideoFormat());
+    return videoFormat.rotationDegrees;
+  }
+
+  private VideoPlayerCallbacks.PlaybackInfo createPlaybackInfo() {
     VideoSize videoSize = exoPlayer.getVideoSize();
     RotationDegrees rotationCorrection = RotationDegrees.ROTATE_0;
     int width = videoSize.width;
@@ -48,15 +66,7 @@ public final class TextureExoPlayerEventListener extends ExoPlayerEventListener 
         }
       }
     }
-    events.onInitialized(width, height, exoPlayer.getDuration(), rotationCorrection.getDegrees());
-  }
-
-  @OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
-  // A video's Format and its rotation degrees are unstable because they are not guaranteed
-  // the same implementation across API versions. It is possible that this logic may need
-  // revisiting should the implementation change across versions of the Exoplayer API.
-  private int getRotationCorrectionFromFormat(ExoPlayer exoPlayer) {
-    Format videoFormat = Objects.requireNonNull(exoPlayer.getVideoFormat());
-    return videoFormat.rotationDegrees;
+    return new VideoPlayerCallbacks.PlaybackInfo(
+      width, height, exoPlayer.getDuration(), rotationCorrection.getDegrees());
   }
 }

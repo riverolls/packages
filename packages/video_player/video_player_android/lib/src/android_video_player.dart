@@ -39,9 +39,11 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
            videoEventStreamProvider ?? _productionVideoEventStreamProvider;
 
   final AndroidVideoPlayerApi _api;
+
   // A method to create VideoPlayerInstanceApi instances, which can be
   // overridden for testing.
   final VideoPlayerInstanceApi Function(int playerId) _playerApiProvider;
+
   // A method to create video event stream instances, which can be
   // overridden for testing.
   final Stream<PlatformVideoEvent> Function(String streamIdentifier)
@@ -67,7 +69,7 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
   }
 
   @override
-  Future<int?> create(DataSource dataSource) {
+  Future<int?> create([DataSource? dataSource]) {
     return createWithOptions(
       VideoCreationOptions(
         dataSource: dataSource,
@@ -80,7 +82,32 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
 
   @override
   Future<int?> createWithOptions(VideoCreationOptions options) async {
-    final DataSource dataSource = options.dataSource;
+    final CreationOptions? pigeonCreationOptions = await _toCreateOptions(
+      options.dataSource,
+    );
+
+    final int playerId;
+    final VideoPlayerViewState state;
+    switch (options.viewType) {
+      case VideoViewType.textureView:
+        final TexturePlayerIds ids = await _api.createForTextureView(
+          pigeonCreationOptions,
+        );
+        playerId = ids.playerId;
+        state = VideoPlayerTextureViewState(textureId: ids.textureId);
+      case VideoViewType.platformView:
+        playerId = await _api.createForPlatformView(pigeonCreationOptions);
+        state = const VideoPlayerPlatformViewState();
+    }
+    ensurePlayerInitialized(playerId, state);
+
+    return playerId;
+  }
+
+  Future<CreationOptions?> _toCreateOptions([DataSource? dataSource]) async {
+    if (dataSource == null) {
+      return null;
+    }
 
     String? uri;
     PlatformVideoFormat? formatHint;
@@ -107,35 +134,18 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
         uri = dataSource.uri;
     }
     if (uri == null) {
-      throw ArgumentError('Unable to construct a video asset from $options');
+      throw ArgumentError('Unable to construct a video asset from $dataSource');
     }
-    final pigeonCreationOptions = CreationOptions(
+    return CreationOptions(
       uri: uri,
       httpHeaders: httpHeaders,
       userAgent: userAgent,
       formatHint: formatHint,
     );
-
-    final int playerId;
-    final VideoPlayerViewState state;
-    switch (options.viewType) {
-      case VideoViewType.textureView:
-        final TexturePlayerIds ids = await _api.createForTextureView(
-          pigeonCreationOptions,
-        );
-        playerId = ids.playerId;
-        state = VideoPlayerTextureViewState(textureId: ids.textureId);
-      case VideoViewType.platformView:
-        playerId = await _api.createForPlatformView(pigeonCreationOptions);
-        state = const VideoPlayerPlatformViewState();
-    }
-    ensurePlayerInitialized(playerId, state);
-
-    return playerId;
   }
 
   // Returns the user agent to use with ExoPlayer for the given headers.
-  String? _userAgentFromHeaders(Map<String, String> httpHeaders) {
+  String? _userAgentFromHeaders([Map<String, String>? httpHeaders]) {
     // TODO(stuartmorgan): HTTP headers are case-insensitive, so this should be
     //  adjusted to find any entry where the key has a case-insensitive match.
     const userAgentKey = 'User-Agent';
@@ -144,7 +154,7 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
     //  plugin, but it's not clear why the default isn't null, which would let
     //  ExoPlayer use its own default value.
     const defaultUserAgent = 'ExoPlayer';
-    return httpHeaders[userAgentKey] ?? defaultUserAgent;
+    return httpHeaders?[userAgentKey] ?? defaultUserAgent;
   }
 
   /// Returns the player instance for [playerId], creating it if it doesn't
@@ -160,6 +170,13 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
     });
   }
 
+  /// Set new play data source.
+  @override
+  Future<void> setDataSource(int playerId, DataSource source) async {
+    final CreationOptions? options = await _toCreateOptions(source);
+    return _playerWith(id: playerId).setDataSource(options!);
+  }
+
   @override
   Future<void> setLooping(int playerId, bool looping) {
     return _playerWith(id: playerId).setLooping(looping);
@@ -173,6 +190,11 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
   @override
   Future<void> pause(int playerId) {
     return _playerWith(id: playerId).pause();
+  }
+
+  @override
+  Future<void> stop(int playerId) {
+    return _playerWith(id: playerId).stop();
   }
 
   @override
@@ -317,6 +339,10 @@ class _PlayerInstance {
 
   final VideoPlayerViewState viewState;
 
+  Future<void> setDataSource(CreationOptions source) {
+    return _api.setDataSource(source);
+  }
+
   Future<void> setLooping(bool looping) {
     return _api.setLooping(looping);
   }
@@ -327,6 +353,10 @@ class _PlayerInstance {
 
   Future<void> pause() {
     return _api.pause();
+  }
+
+  Future<void> stop() {
+    return _api.stop();
   }
 
   Future<void> setVolume(double volume) {
@@ -480,6 +510,15 @@ class _PlayerInstance {
         if (event.state != PlatformPlaybackState.buffering) {
           _setBuffering(false);
         }
+      case PlaybackInfoChangeEvent _:
+        _eventStreamController.add(
+          VideoEvent(
+            eventType: VideoEventType.isPlayingInfoUpdate,
+            duration: Duration(milliseconds: event.duration),
+            size: Size(event.width.toDouble(), event.height.toDouble()),
+            rotationCorrection: event.rotationCorrection,
+          ),
+        );
       case AudioTrackChangedEvent _:
         // Complete the audio track selection completer if it exists
         // This signals that the track selection has completed
