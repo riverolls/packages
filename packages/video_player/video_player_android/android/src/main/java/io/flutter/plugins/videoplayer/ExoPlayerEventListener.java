@@ -13,7 +13,6 @@ import androidx.media3.common.Tracks;
 import androidx.media3.exoplayer.ExoPlayer;
 
 public abstract class ExoPlayerEventListener implements Player.Listener {
-  private boolean isInitialized = false;
   protected final ExoPlayer exoPlayer;
   protected final VideoPlayerCallbacks events;
 
@@ -49,7 +48,7 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
     this.events = events;
   }
 
-  protected abstract void sendInitialized();
+  protected abstract void sendPlaybackInfo();
 
   @Override
   public void onPlaybackStateChanged(final int playbackState) {
@@ -60,10 +59,7 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
         break;
       case Player.STATE_READY:
         platformState = PlatformPlaybackState.READY;
-        if (!isInitialized) {
-          isInitialized = true;
-          sendInitialized();
-        }
+        sendPlaybackInfo();
         break;
       case Player.STATE_ENDED:
         platformState = PlatformPlaybackState.ENDED;

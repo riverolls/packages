@@ -147,7 +147,7 @@ Future<Duration> _getDuration(AndroidVideoPlayer player, int playerId) {
   return player
       .videoEventsFor(playerId)
       .firstWhere((VideoEvent event) {
-        return event.eventType == VideoEventType.initialized;
+        return event.eventType == VideoEventType.isPlaybackInfoUpdate;
       })
       .then((VideoEvent event) {
         return event.duration!;

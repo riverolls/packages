@@ -7,7 +7,10 @@
 #import <AVFoundation/AVFoundation.h>
 
 @implementation FVPDefaultAVFactory
-- (AVPlayer *)playerWithPlayerItem:(AVPlayerItem *)playerItem {
+- (AVPlayer *)playerWithPlayerItem:(nullable AVPlayerItem *)playerItem {
+  if (playerItem == nil) {
+    return [[AVPlayer alloc] init];
+  }
   return [AVPlayer playerWithPlayerItem:playerItem];
 }
 

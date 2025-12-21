@@ -8,6 +8,10 @@
 #import <Flutter/Flutter.h>
 #endif
 
+#import <AVFoundation/AVPlayerItem.h>
+#import "messages.g.h"
+
 @interface FVPVideoPlayerPlugin : NSObject <FlutterPlugin>
 - (instancetype)initWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar;
++ (nullable AVPlayerItem *)playerItemWithCreationOptions:(nullable FVPCreationOptions *)options;
 @end

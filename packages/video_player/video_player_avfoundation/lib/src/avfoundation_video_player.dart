@@ -27,6 +27,7 @@ class AVFoundationVideoPlayer extends VideoPlayerPlatform {
        _playerApiProvider = playerApiProvider ?? _productionApiProvider;
 
   final AVFoundationVideoPlayerApi _api;
+
   // A method to create VideoPlayerInstanceApi instances, which can be
   // overridden for testing.
   final VideoPlayerInstanceApi Function(int mapId) _playerApiProvider;
@@ -50,7 +51,7 @@ class AVFoundationVideoPlayer extends VideoPlayerPlatform {
   }
 
   @override
-  Future<int?> create(DataSource dataSource) async {
+  Future<int?> create([DataSource? dataSource]) async {
     return createWithOptions(
       VideoCreationOptions(
         dataSource: dataSource,
@@ -63,8 +64,34 @@ class AVFoundationVideoPlayer extends VideoPlayerPlatform {
 
   @override
   Future<int?> createWithOptions(VideoCreationOptions options) async {
-    final DataSource dataSource = options.dataSource;
+    final DataSource? dataSource = options.dataSource;
     final VideoViewType viewType = options.viewType;
+    final CreationOptions? pigeonCreationOptions = await _toCreateOptions(
+      dataSource,
+    );
+
+    final int playerId;
+    final VideoPlayerViewState state;
+    switch (viewType) {
+      case VideoViewType.textureView:
+        final TexturePlayerIds ids = await _api.createForTextureView(
+          pigeonCreationOptions,
+        );
+        playerId = ids.playerId;
+        state = VideoPlayerTextureViewState(textureId: ids.textureId);
+      case VideoViewType.platformView:
+        playerId = await _api.createForPlatformView(pigeonCreationOptions);
+        state = const VideoPlayerPlatformViewState();
+    }
+    ensurePlayerInitialized(playerId, state);
+
+    return playerId;
+  }
+
+  Future<CreationOptions?> _toCreateOptions([DataSource? dataSource]) async {
+    if (dataSource == null) {
+      return null;
+    }
 
     String? uri;
     switch (dataSource.sourceType) {
@@ -90,29 +117,9 @@ class AVFoundationVideoPlayer extends VideoPlayerPlatform {
         uri = dataSource.uri;
     }
     if (uri == null) {
-      throw ArgumentError('Unable to construct a video asset from $options');
+      throw ArgumentError('Unable to construct a video asset from $dataSource');
     }
-    final pigeonCreationOptions = CreationOptions(
-      uri: uri,
-      httpHeaders: dataSource.httpHeaders,
-    );
-
-    final int playerId;
-    final VideoPlayerViewState state;
-    switch (viewType) {
-      case VideoViewType.textureView:
-        final TexturePlayerIds ids = await _api.createForTextureView(
-          pigeonCreationOptions,
-        );
-        playerId = ids.playerId;
-        state = VideoPlayerTextureViewState(textureId: ids.textureId);
-      case VideoViewType.platformView:
-        playerId = await _api.createForPlatformView(pigeonCreationOptions);
-        state = const VideoPlayerPlatformViewState();
-    }
-    ensurePlayerInitialized(playerId, state);
-
-    return playerId;
+    return CreationOptions(uri: uri, httpHeaders: dataSource.httpHeaders);
   }
 
   /// Returns the API instance for [playerId], creating it if it doesn't already
@@ -132,6 +139,12 @@ class AVFoundationVideoPlayer extends VideoPlayerPlatform {
   }
 
   @override
+  Future<void> setDataSource(int playerId, DataSource source) async {
+    final CreationOptions? options = await _toCreateOptions(source);
+    return _playerWith(id: playerId).setDataSource(options!);
+  }
+
+  @override
   Future<void> setLooping(int playerId, bool looping) {
     return _playerWith(id: playerId).setLooping(looping);
   }
@@ -144,6 +157,11 @@ class AVFoundationVideoPlayer extends VideoPlayerPlatform {
   @override
   Future<void> pause(int playerId) {
     return _playerWith(id: playerId).pause();
+  }
+
+  @override
+  Future<void> stop(int playerId) {
+    return _playerWith(id: playerId).stop();
   }
 
   @override
@@ -231,9 +249,15 @@ class _PlayerInstance {
       StreamController<VideoEvent>.broadcast();
   StreamSubscription<dynamic>? _eventSubscription;
 
+  Future<void> setDataSource(CreationOptions source) async {
+    return _api.setDataSource(source);
+  }
+
   Future<void> play() => _api.play();
 
   Future<void> pause() => _api.pause();
+
+  Future<void> stop() => _api.stop();
 
   Future<void> setLooping(bool looping) => _api.setLooping(looping);
 
@@ -270,8 +294,8 @@ class _PlayerInstance {
     final map = event as Map<dynamic, dynamic>;
     // The strings here must all match the strings in FVPEventBridge.m.
     _eventStreamController.add(switch (map['event']) {
-      'initialized' => VideoEvent(
-        eventType: VideoEventType.initialized,
+      'playbackInfoChanged' => VideoEvent(
+        eventType: VideoEventType.isPlaybackInfoUpdate,
         duration: Duration(milliseconds: map['duration'] as int),
         size: Size(
           (map['width'] as num?)?.toDouble() ?? 0.0,

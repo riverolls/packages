@@ -30,7 +30,7 @@ class FakeController extends ValueNotifier<VideoPlayerValue>
   int playerId = VideoPlayerController.kUninitializedPlayerId;
 
   @override
-  String get dataSource => '';
+  String? get dataSource => '';
 
   @override
   Map<String, String> get httpHeaders => <String, String>{};
@@ -57,7 +57,7 @@ class FakeController extends ValueNotifier<VideoPlayerValue>
   Future<void> setPlaybackSpeed(double speed) async {}
 
   @override
-  Future<void> initialize() async {}
+  Future<void> initialize({bool waitFirstDataSource = true}) async {}
 
   @override
   Future<void> pause() async {}
@@ -84,6 +84,12 @@ class FakeController extends ValueNotifier<VideoPlayerValue>
   Future<void> setClosedCaptionFile(
     Future<ClosedCaptionFile>? closedCaptionFile,
   ) async {}
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> setDataSource(DataSource source) async {}
 }
 
 Future<ClosedCaptionFile> _loadClosedCaption() async =>
@@ -141,7 +147,7 @@ void main() {
     controller.playerId = 123;
     controller.value = controller.value.copyWith(
       duration: const Duration(milliseconds: 100),
-      isInitialized: true,
+      isDataSourceAvailable: true,
     );
 
     await tester.pump();
@@ -192,7 +198,7 @@ void main() {
       controller.playerId = 321;
       controller.value = controller.value.copyWith(
         duration: const Duration(milliseconds: 100),
-        isInitialized: true,
+        isDataSourceAvailable: true,
       );
 
       await tester.pump();
@@ -220,7 +226,7 @@ void main() {
       controller.value = controller.value.copyWith(
         duration: const Duration(milliseconds: 100),
         position: const Duration(milliseconds: 50),
-        isInitialized: true,
+        isDataSourceAvailable: true,
       );
       await tester.pumpWidget(MaterialApp(home: progressIndicator));
       await tester.pump();
@@ -243,7 +249,7 @@ void main() {
     addTearDown(controller.dispose);
     controller.value = controller.value.copyWith(
       duration: Duration.zero,
-      isInitialized: true,
+      isDataSourceAvailable: true,
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -612,7 +618,7 @@ void main() {
       final controller = VideoPlayerController.networkUrl(_localhostUri);
       addTearDown(controller.dispose);
 
-      expect(controller.value.isInitialized, isFalse);
+      expect(controller.value.isDataSourceAvailable, isFalse);
 
       await controller.play();
 
@@ -678,7 +684,7 @@ void main() {
         final controller = VideoPlayerController.networkUrl(_localhostUri);
         addTearDown(controller.dispose);
 
-        expect(controller.value.isInitialized, isFalse);
+        expect(controller.value.isDataSourceAvailable, isFalse);
 
         await controller.seekTo(const Duration(milliseconds: 500));
 
@@ -1167,7 +1173,7 @@ void main() {
       expect(uninitialized.playbackSpeed, 1.0);
       expect(uninitialized.errorDescription, isNull);
       expect(uninitialized.size, equals(Size.zero));
-      expect(uninitialized.isInitialized, isFalse);
+      expect(uninitialized.isDataSourceAvailable, isFalse);
       expect(uninitialized.hasError, isFalse);
       expect(uninitialized.aspectRatio, 1.0);
     });
@@ -1188,7 +1194,7 @@ void main() {
       expect(error.playbackSpeed, 1.0);
       expect(error.errorDescription, errorMessage);
       expect(error.size, equals(Size.zero));
-      expect(error.isInitialized, isFalse);
+      expect(error.isDataSourceAvailable, isFalse);
       expect(error.hasError, isTrue);
       expect(error.aspectRatio, 1.0);
     });
@@ -1207,7 +1213,7 @@ void main() {
       final buffered = <DurationRange>[
         DurationRange(Duration.zero, const Duration(seconds: 4)),
       ];
-      const isInitialized = true;
+      const isDataSourceAvailable = true;
       const isPlaying = true;
       const isLooping = true;
       const isBuffering = true;
@@ -1221,7 +1227,7 @@ void main() {
         caption: caption,
         captionOffset: captionOffset,
         buffered: buffered,
-        isInitialized: isInitialized,
+        isDataSourceAvailable: isDataSourceAvailable,
         isPlaying: isPlaying,
         isLooping: isLooping,
         isBuffering: isBuffering,
@@ -1237,7 +1243,7 @@ void main() {
         'caption: Caption(number: 0, start: 0:00:00.000000, end: 0:00:00.000000, text: foo), '
         'captionOffset: 0:00:00.250000, '
         'buffered: [DurationRange(start: 0:00:00.000000, end: 0:00:04.000000)], '
-        'isInitialized: true, '
+        'isDataSourceAvailable: true, '
         'isPlaying: true, '
         'isLooping: true, '
         'isBuffering: true, '
@@ -1282,7 +1288,7 @@ void main() {
     group('aspectRatio', () {
       test('640x480 -> 4:3', () {
         const value = VideoPlayerValue(
-          isInitialized: true,
+          isDataSourceAvailable: true,
           size: Size(640, 480),
           duration: Duration(seconds: 1),
         );
@@ -1291,7 +1297,7 @@ void main() {
 
       test('no size -> 1.0', () {
         const value = VideoPlayerValue(
-          isInitialized: true,
+          isDataSourceAvailable: true,
           duration: Duration(seconds: 1),
         );
         expect(value.aspectRatio, 1.0);
@@ -1299,7 +1305,7 @@ void main() {
 
       test('height = 0 -> 1.0', () {
         const value = VideoPlayerValue(
-          isInitialized: true,
+          isDataSourceAvailable: true,
           size: Size(640, 0),
           duration: Duration(seconds: 1),
         );
@@ -1308,7 +1314,7 @@ void main() {
 
       test('width = 0 -> 1.0', () {
         const value = VideoPlayerValue(
-          isInitialized: true,
+          isDataSourceAvailable: true,
           size: Size(0, 480),
           duration: Duration(seconds: 1),
         );
@@ -1317,7 +1323,7 @@ void main() {
 
       test('negative aspect ratio -> 1.0', () {
         const value = VideoPlayerValue(
-          isInitialized: true,
+          isDataSourceAvailable: true,
           size: Size(640, -480),
           duration: Duration(seconds: 1),
         );
@@ -1502,7 +1508,7 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
       <int, VideoPlayerWebOptions>{};
 
   @override
-  Future<int?> create(DataSource dataSource) async {
+  Future<int?> create([DataSource? dataSource]) async {
     calls.add('create');
     final stream = StreamController<VideoEvent>();
     streams[nextPlayerId] = stream;
@@ -1516,13 +1522,15 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
     } else {
       stream.add(
         VideoEvent(
-          eventType: VideoEventType.initialized,
+          eventType: VideoEventType.isPlaybackInfoUpdate,
           size: const Size(100, 100),
           duration: const Duration(seconds: 1),
         ),
       );
     }
-    dataSources.add(dataSource);
+    if (dataSource != null) {
+      dataSources.add(dataSource);
+    }
     return nextPlayerId++;
   }
 
@@ -1541,13 +1549,15 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
     } else {
       stream.add(
         VideoEvent(
-          eventType: VideoEventType.initialized,
+          eventType: VideoEventType.isPlaybackInfoUpdate,
           size: const Size(100, 100),
           duration: const Duration(seconds: 1),
         ),
       );
     }
-    dataSources.add(options.dataSource);
+    if (options.dataSource != null) {
+      dataSources.add(options.dataSource!);
+    }
     viewTypes.add(options.viewType);
     return nextPlayerId++;
   }
@@ -1576,6 +1586,11 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   @override
   Future<void> play(int playerId) async {
     calls.add('play');
+  }
+
+  @override
+  Future<void> stop(int playerId) async {
+    calls.add('stop');
   }
 
   @override

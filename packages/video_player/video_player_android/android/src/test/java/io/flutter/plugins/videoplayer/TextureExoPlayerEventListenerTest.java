@@ -44,7 +44,7 @@ public class TextureExoPlayerEventListenerTest {
     when(mockExoPlayer.getDuration()).thenReturn(10L);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(800, 400, 10L, 0);
+    verify(mockCallbacks).onPlaybackInfoChanged(800, 400, 10L, 0);
   }
 
   @Test
@@ -61,7 +61,7 @@ public class TextureExoPlayerEventListenerTest {
     when(mockExoPlayer.getVideoFormat()).thenReturn(videoFormat);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(800, 400, 10L, rotationCorrection);
+    verify(mockCallbacks).onPlaybackInfoChanged(800, 400, 10L, rotationCorrection);
   }
 
   @Test
@@ -75,7 +75,7 @@ public class TextureExoPlayerEventListenerTest {
     when(mockExoPlayer.getDuration()).thenReturn(10L);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(800, 400, 10L, 0);
+    verify(mockCallbacks).onPlaybackInfoChanged(800, 400, 10L, 0);
   }
 
   @Test
@@ -92,7 +92,7 @@ public class TextureExoPlayerEventListenerTest {
     when(mockExoPlayer.getVideoFormat()).thenReturn(videoFormat);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(800, 400, 10L, 90);
+    verify(mockCallbacks).onPlaybackInfoChanged(800, 400, 10L, 90);
   }
 
   @Test
@@ -105,7 +105,7 @@ public class TextureExoPlayerEventListenerTest {
     when(mockExoPlayer.getDuration()).thenReturn(10L);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(800, 400, 10L, 0);
+    verify(mockCallbacks).onPlaybackInfoChanged(800, 400, 10L, 0);
   }
 
   @Test
@@ -122,6 +122,6 @@ public class TextureExoPlayerEventListenerTest {
     when(mockExoPlayer.getVideoFormat()).thenReturn(videoFormat);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(800, 400, 10L, 270);
+    verify(mockCallbacks).onPlaybackInfoChanged(800, 400, 10L, 270);
   }
 }

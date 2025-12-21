@@ -174,10 +174,10 @@ static void upgradeAudioSessionCategory(AVAudioSessionCategory requestedCategory
   [self.playersByIdentifier removeAllObjects];
 }
 
-- (nullable NSNumber *)createPlatformViewPlayerWithOptions:(nonnull FVPCreationOptions *)options
+- (nullable NSNumber *)createPlatformViewPlayerWithOptions:(nullable FVPCreationOptions *)options
                                                      error:(FlutterError **)error {
   @try {
-    AVPlayerItem *item = [self playerItemWithCreationOptions:options];
+    AVPlayerItem* _Nullable item = [FVPVideoPlayerPlugin playerItemWithCreationOptions:options];
 
     // FVPVideoPlayer contains all required logic for platform views.
     FVPVideoPlayer *player = [[FVPVideoPlayer alloc] initWithPlayerItem:item
@@ -191,11 +191,10 @@ static void upgradeAudioSessionCategory(AVAudioSessionCategory requestedCategory
   }
 }
 
-- (nullable FVPTexturePlayerIds *)createTexturePlayerWithOptions:
-                                      (nonnull FVPCreationOptions *)options
+- (nullable FVPTexturePlayerIds *)createTexturePlayerWithOptions:(nullable FVPCreationOptions *)options
                                                            error:(FlutterError **)error {
   @try {
-    AVPlayerItem *item = [self playerItemWithCreationOptions:options];
+    AVPlayerItem* _Nullable item = [FVPVideoPlayerPlugin playerItemWithCreationOptions:options];
     FVPFrameUpdater *frameUpdater =
         [[FVPFrameUpdater alloc] initWithRegistry:self.registrar.textures];
     NSObject<FVPDisplayLink> *displayLink =
@@ -263,7 +262,10 @@ static void upgradeAudioSessionCategory(AVAudioSessionCategory requestedCategory
 }
 
 /// Returns the AVPlayerItem corresponding to the given player creation options.
-- (nonnull AVPlayerItem *)playerItemWithCreationOptions:(nonnull FVPCreationOptions *)options {
++ (nullable AVPlayerItem *)playerItemWithCreationOptions:(nullable FVPCreationOptions *)options {
+  if (options == nil) {
+    return nil;
+  }
   NSDictionary<NSString *, NSString *> *headers = options.httpHeaders;
   NSDictionary<NSString *, id> *itemOptions =
       headers.count == 0 ? nil : @{@"AVURLAssetHTTPHeaderFieldsKey" : headers};

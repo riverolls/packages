@@ -14,6 +14,30 @@ import java.util.Map;
 
 /** A video to be played by {@link VideoPlayer}. */
 public abstract class VideoAsset {
+  @Nullable
+  static VideoAsset fromOptions(@Nullable CreationOptions options) {
+    if (options == null) return null;
+
+    final @NonNull String uri = options.getUri();
+    if (uri.startsWith("asset:")) {
+      return VideoAsset.fromAssetUrl(uri);
+    } else if (uri.startsWith("rtsp:")) {
+      return VideoAsset.fromRtspUrl(uri);
+    } else {
+      VideoAsset.StreamingFormat streamingFormat = VideoAsset.StreamingFormat.UNKNOWN;
+      @Nullable PlatformVideoFormat formatHint = options.getFormatHint();
+      if (formatHint != null) {
+        streamingFormat = switch (formatHint) {
+          case SS -> StreamingFormat.SMOOTH;
+          case DASH -> StreamingFormat.DYNAMIC_ADAPTIVE;
+          case HLS -> StreamingFormat.HTTP_LIVE;
+        };
+      }
+      return VideoAsset.fromRemoteUrl(
+          uri, streamingFormat, options.getHttpHeaders(), options.getUserAgent());
+    }
+  }
+
   /**
    * Returns an asset from a local {@code asset:///} URL, i.e. an on-device asset.
    *

@@ -599,7 +599,7 @@ void main() {
       test('initialize', () async {
         final Stream<VideoEvent> eventStream =
             mockPlayerEmitingEvents(<PlatformVideoEvent>[
-              InitializationEvent(
+              PlaybackInfoChangeEvent(
                 duration: 98765,
                 width: 1920,
                 height: 1080,
@@ -611,7 +611,7 @@ void main() {
           eventStream,
           emitsInOrder(<dynamic>[
             VideoEvent(
-              eventType: VideoEventType.initialized,
+              eventType: VideoEventType.isPlaybackInfoUpdate,
               duration: const Duration(milliseconds: 98765),
               size: const Size(1920, 1080),
               rotationCorrection: 90,
@@ -623,7 +623,7 @@ void main() {
       test('initialization triggers buffer update polling', () async {
         final Stream<VideoEvent> eventStream =
             mockPlayerEmitingEvents(<PlatformVideoEvent>[
-              InitializationEvent(
+              PlaybackInfoChangeEvent(
                 duration: 98765,
                 width: 1920,
                 height: 1080,
@@ -635,7 +635,7 @@ void main() {
           eventStream,
           emitsInOrder(<dynamic>[
             VideoEvent(
-              eventType: VideoEventType.initialized,
+              eventType: VideoEventType.isPlaybackInfoUpdate,
               duration: const Duration(milliseconds: 98765),
               size: const Size(1920, 1080),
               rotationCorrection: 90,
