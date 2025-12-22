@@ -1,3 +1,7 @@
+## 2.8.9
+
+* Adds support for change data source.
+
 ## 2.8.8
 
 * Refactors Dart internals for maintainability.

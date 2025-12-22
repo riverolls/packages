@@ -1,3 +1,7 @@
+## 6.6.1
+
+* Adds support for change data source.
+
 ## NEXT
 
 * Updates minimum supported SDK version to Flutter 3.32/Dart 3.8.
