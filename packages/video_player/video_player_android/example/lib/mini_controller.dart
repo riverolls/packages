@@ -281,6 +281,13 @@ class MiniController extends ValueNotifier<VideoPlayerValue> {
           _platform.setVolume(_playerId, 1.0);
           _platform.setLooping(_playerId, true);
           _applyPlayPause();
+        case VideoEventType.isPlayingInfoUpdate:
+          value = value.copyWith(
+            duration: event.duration,
+            rotationCorrection: event.rotationCorrection,
+            size: event.size,
+            isInitialized: event.duration != null,
+          );
         case VideoEventType.completed:
           pause().then((void pauseResult) => seekTo(value.duration));
         case VideoEventType.bufferingUpdate:
