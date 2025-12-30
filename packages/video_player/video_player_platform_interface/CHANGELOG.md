@@ -1,6 +1,7 @@
-## 6.6.1
+## 6.6.1+1
 
 * Adds support for change data source.
+* Adds `setDataSource`, `stop` methods for platform function.
 
 ## NEXT
 
