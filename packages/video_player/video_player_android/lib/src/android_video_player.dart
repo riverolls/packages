@@ -31,12 +31,22 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
   }
 
   @override
-  Future<int?> create(DataSource dataSource) async {
+  Future<int?> create([DataSource? dataSource]) async {
+    final CreateMessage? message = _toCreateMessage(dataSource);
+    final TextureMessage response = await _api.create(message);
+    return response.textureId;
+  }
+
+  CreateMessage? _toCreateMessage([DataSource? dataSource]) {
+    if (dataSource == null) {
+      return null;
+    }
+
     String? asset;
     String? packageName;
     String? uri;
     String? formatHint;
-    Map<String, String> httpHeaders = <String, String>{};
+    final Map<String, String> httpHeaders = dataSource.httpHeaders;
     switch (dataSource.sourceType) {
       case DataSourceType.asset:
         asset = dataSource.asset;
@@ -44,23 +54,17 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
       case DataSourceType.network:
         uri = dataSource.uri;
         formatHint = _videoFormatStringMap[dataSource.formatHint];
-        httpHeaders = dataSource.httpHeaders;
       case DataSourceType.file:
-        uri = dataSource.uri;
-        httpHeaders = dataSource.httpHeaders;
       case DataSourceType.contentUri:
         uri = dataSource.uri;
     }
-    final CreateMessage message = CreateMessage(
+    return CreateMessage(
       asset: asset,
       packageName: packageName,
       uri: uri,
       httpHeaders: httpHeaders,
       formatHint: formatHint,
     );
-
-    final TextureMessage response = await _api.create(message);
-    return response.textureId;
   }
 
   @override
@@ -72,8 +76,20 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
   }
 
   @override
+  Future<void> setDataSource(int textureId, DataSource source) {
+    final CreateMessage createMsg = _toCreateMessage(source)!;
+    final TextureMessage textureMsg = TextureMessage(textureId: textureId);
+    return _api.setDataSource(textureMsg, createMsg);
+  }
+
+  @override
   Future<void> play(int textureId) {
     return _api.play(TextureMessage(textureId: textureId));
+  }
+
+  @override
+  Future<void> stop(int textureId) {
+    return _api.stop(TextureMessage(textureId: textureId));
   }
 
   @override
@@ -121,9 +137,9 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
         .map((dynamic event) {
       final Map<dynamic, dynamic> map = event as Map<dynamic, dynamic>;
       switch (map['event']) {
-        case 'initialized':
+        case 'playbackInfo':
           return VideoEvent(
-            eventType: VideoEventType.initialized,
+            eventType: VideoEventType.isPlaybackInfoUpdate,
             duration: Duration(milliseconds: map['duration'] as int),
             size: Size((map['width'] as num?)?.toDouble() ?? 0.0,
                 (map['height'] as num?)?.toDouble() ?? 0.0),

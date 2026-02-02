@@ -52,7 +52,7 @@ public final class ExoPlayerEventListenerTests {
     when(mockExoPlayer.getDuration()).thenReturn(10L);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(800, 400, 10L, 0);
+    verify(mockCallbacks).onPlaybackInfoChanged(800, 400, 10L, 0);
   }
 
   @Test
@@ -62,7 +62,7 @@ public final class ExoPlayerEventListenerTests {
     when(mockExoPlayer.getDuration()).thenReturn(10L);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(400, 800, 10L, 0);
+    verify(mockCallbacks).onPlaybackInfoChanged(400, 800, 10L, 0);
   }
 
   @Test
@@ -72,7 +72,7 @@ public final class ExoPlayerEventListenerTests {
     when(mockExoPlayer.getDuration()).thenReturn(10L);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(400, 800, 10L, 0);
+    verify(mockCallbacks).onPlaybackInfoChanged(400, 800, 10L, 0);
   }
 
   @Test
@@ -82,7 +82,7 @@ public final class ExoPlayerEventListenerTests {
     when(mockExoPlayer.getDuration()).thenReturn(10L);
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
-    verify(mockCallbacks).onInitialized(800, 400, 10L, 180);
+    verify(mockCallbacks).onPlaybackInfoChanged(800, 400, 10L, 180);
   }
 
   @Test

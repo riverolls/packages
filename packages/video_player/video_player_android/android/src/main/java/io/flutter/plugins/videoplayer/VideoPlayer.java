@@ -10,6 +10,7 @@ import static androidx.media3.common.Player.REPEAT_MODE_OFF;
 import android.content.Context;
 import android.view.Surface;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
@@ -21,6 +22,7 @@ import io.flutter.view.TextureRegistry;
 final class VideoPlayer {
   private ExoPlayer exoPlayer;
   private Surface surface;
+  private ExoPlayerEventListener eventListener;
   private final TextureRegistry.SurfaceTextureEntry textureEntry;
   private final VideoPlayerCallbacks videoPlayerEvents;
   private final VideoPlayerOptions options;
@@ -40,11 +42,15 @@ final class VideoPlayer {
       Context context,
       VideoPlayerCallbacks events,
       TextureRegistry.SurfaceTextureEntry textureEntry,
-      VideoAsset asset,
+      @Nullable VideoAsset asset,
       VideoPlayerOptions options) {
-    ExoPlayer.Builder builder =
-        new ExoPlayer.Builder(context).setMediaSourceFactory(asset.getMediaSourceFactory(context));
-    return new VideoPlayer(builder, events, textureEntry, asset.getMediaItem(), options);
+    @Nullable MediaItem mediaItem = null;
+    ExoPlayer.Builder builder = new ExoPlayer.Builder(context);
+    if (asset != null) {
+      builder.setMediaSourceFactory(asset.getMediaSourceFactory(context));
+      mediaItem = asset.getMediaItem();
+    }
+    return new VideoPlayer(builder, events, textureEntry, mediaItem, options);
   }
 
   @VisibleForTesting
@@ -52,15 +58,17 @@ final class VideoPlayer {
       ExoPlayer.Builder builder,
       VideoPlayerCallbacks events,
       TextureRegistry.SurfaceTextureEntry textureEntry,
-      MediaItem mediaItem,
+      @Nullable MediaItem mediaItem,
       VideoPlayerOptions options) {
     this.videoPlayerEvents = events;
     this.textureEntry = textureEntry;
     this.options = options;
 
     ExoPlayer exoPlayer = builder.build();
-    exoPlayer.setMediaItem(mediaItem);
-    exoPlayer.prepare();
+    if (mediaItem != null) {
+      exoPlayer.setMediaItem(mediaItem);
+      exoPlayer.prepare();
+    }
 
     setUpVideoPlayer(exoPlayer);
   }
@@ -71,7 +79,15 @@ final class VideoPlayer {
     surface = new Surface(textureEntry.surfaceTexture());
     exoPlayer.setVideoSurface(surface);
     setAudioAttributes(exoPlayer, options.mixWithOthers);
-    exoPlayer.addListener(new ExoPlayerEventListener(exoPlayer, videoPlayerEvents));
+    readdListener(exoPlayer);
+  }
+
+  private void readdListener(ExoPlayer exoPlayer) {
+    if (eventListener != null) {
+      exoPlayer.removeListener(eventListener);
+    }
+    eventListener = new ExoPlayerEventListener(exoPlayer, videoPlayerEvents);
+    exoPlayer.addListener(eventListener);
   }
 
   void sendBufferingUpdate() {
@@ -84,12 +100,23 @@ final class VideoPlayer {
         !isMixMode);
   }
 
+  public void setDataSource(VideoAsset asset) {
+    readdListener(exoPlayer);
+    exoPlayer.stop();
+    exoPlayer.setMediaItem(asset.getMediaItem());
+    exoPlayer.prepare();
+  }
+
   void play() {
     exoPlayer.setPlayWhenReady(true);
   }
 
   void pause() {
     exoPlayer.setPlayWhenReady(false);
+  }
+
+  public void stop() {
+    exoPlayer.stop();
   }
 
   void setLooping(boolean value) {

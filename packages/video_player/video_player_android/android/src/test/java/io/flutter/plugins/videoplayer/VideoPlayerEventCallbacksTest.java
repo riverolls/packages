@@ -49,7 +49,7 @@ public final class VideoPlayerEventCallbacksTest {
 
   @Test
   public void onInitializedSendsWidthHeightAndDuration() {
-    eventCallbacks.onInitialized(800, 400, 10L, 0);
+    eventCallbacks.onPlaybackInfoChanged(800, 400, 10L, 0);
 
     verify(mockEventSink).success(eventCaptor.capture());
 
@@ -65,7 +65,7 @@ public final class VideoPlayerEventCallbacksTest {
 
   @Test
   public void onInitializedIncludesRotationCorrectIfNonZero() {
-    eventCallbacks.onInitialized(800, 400, 10L, 180);
+    eventCallbacks.onPlaybackInfoChanged(800, 400, 10L, 180);
 
     verify(mockEventSink).success(eventCaptor.capture());
 

@@ -8,6 +8,8 @@ import android.content.Context;
 import android.os.Build;
 import android.util.LongSparseArray;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import io.flutter.FlutterInjector;
 import io.flutter.Log;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -93,44 +95,15 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
     disposeAllPlayers();
   }
 
-  public @NonNull TextureMessage create(@NonNull CreateMessage arg) {
+  public @NonNull TextureMessage create(@Nullable CreateMessage arg) {
     TextureRegistry.SurfaceTextureEntry handle =
         flutterState.textureRegistry.createSurfaceTexture();
     EventChannel eventChannel =
         new EventChannel(
             flutterState.binaryMessenger, "flutter.io/videoPlayer/videoEvents" + handle.id());
 
-    final VideoAsset videoAsset;
-    if (arg.getAsset() != null) {
-      String assetLookupKey;
-      if (arg.getPackageName() != null) {
-        assetLookupKey =
-            flutterState.keyForAssetAndPackageName.get(arg.getAsset(), arg.getPackageName());
-      } else {
-        assetLookupKey = flutterState.keyForAsset.get(arg.getAsset());
-      }
-      videoAsset = VideoAsset.fromAssetUrl("asset:///" + assetLookupKey);
-    } else if (arg.getUri().startsWith("rtsp://")) {
-      videoAsset = VideoAsset.fromRtspUrl(arg.getUri());
-    } else {
-      Map<String, String> httpHeaders = arg.getHttpHeaders();
-      VideoAsset.StreamingFormat streamingFormat = VideoAsset.StreamingFormat.UNKNOWN;
-      String formatHint = arg.getFormatHint();
-      if (formatHint != null) {
-        switch (formatHint) {
-          case "ss":
-            streamingFormat = VideoAsset.StreamingFormat.SMOOTH;
-            break;
-          case "dash":
-            streamingFormat = VideoAsset.StreamingFormat.DYNAMIC_ADAPTIVE;
-            break;
-          case "hls":
-            streamingFormat = VideoAsset.StreamingFormat.HTTP_LIVE;
-            break;
-        }
-      }
-      videoAsset = VideoAsset.fromRemoteUrl(arg.getUri(), streamingFormat, arg.getHttpHeaders());
-    }
+    @Nullable final VideoAsset videoAsset = fromOptions(arg, flutterState);
+
     videoPlayers.put(
         handle.id(),
         VideoPlayer.create(
@@ -147,6 +120,15 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
     VideoPlayer player = videoPlayers.get(arg.getTextureId());
     player.dispose();
     videoPlayers.remove(arg.getTextureId());
+  }
+
+  @Override
+  public void setDataSource(@NonNull TextureMessage textureMsg, @NonNull CreateMessage msg) {
+    VideoAsset videoAsset = fromOptions(msg, flutterState);
+    assert videoAsset != null;
+
+    VideoPlayer player = videoPlayers.get(textureMsg.getTextureId());
+    player.setDataSource(videoAsset);
   }
 
   public void setLooping(@NonNull LoopingMessage arg) {
@@ -191,6 +173,12 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
   }
 
   @Override
+  public void stop(@NonNull TextureMessage arg) {
+    VideoPlayer player = videoPlayers.get(arg.getTextureId());
+    player.stop();
+  }
+
+  @Override
   public void setMixWithOthers(@NonNull MixWithOthersMessage arg) {
     options.mixWithOthers = arg.getMixWithOthers();
   }
@@ -224,11 +212,47 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
     }
 
     void startListening(VideoPlayerPlugin methodCallHandler, BinaryMessenger messenger) {
-      AndroidVideoPlayerApi.setup(messenger, methodCallHandler);
+      AndroidVideoPlayerApi.setUp(messenger, methodCallHandler);
     }
 
     void stopListening(BinaryMessenger messenger) {
-      AndroidVideoPlayerApi.setup(messenger, null);
+      AndroidVideoPlayerApi.setUp(messenger, null);
     }
+  }
+
+  static @Nullable VideoAsset fromOptions(@Nullable CreateMessage arg, FlutterState flutterState) {
+    if (arg == null) return null;
+    final VideoAsset videoAsset;
+    if (arg.getAsset() != null) {
+      String assetLookupKey;
+      if (arg.getPackageName() != null) {
+        assetLookupKey =
+                flutterState.keyForAssetAndPackageName.get(arg.getAsset(), arg.getPackageName());
+      } else {
+        assetLookupKey = flutterState.keyForAsset.get(arg.getAsset());
+      }
+      videoAsset = VideoAsset.fromAssetUrl("asset:///" + assetLookupKey);
+    } else if (arg.getUri() != null && arg.getUri().startsWith("rtsp://")) {
+      videoAsset = VideoAsset.fromRtspUrl(arg.getUri());
+    } else {
+      Map<String, String> httpHeaders = arg.getHttpHeaders();
+      VideoAsset.StreamingFormat streamingFormat = VideoAsset.StreamingFormat.UNKNOWN;
+      String formatHint = arg.getFormatHint();
+      if (formatHint != null) {
+        switch (formatHint) {
+          case "ss":
+            streamingFormat = VideoAsset.StreamingFormat.SMOOTH;
+            break;
+          case "dash":
+            streamingFormat = VideoAsset.StreamingFormat.DYNAMIC_ADAPTIVE;
+            break;
+          case "hls":
+            streamingFormat = VideoAsset.StreamingFormat.HTTP_LIVE;
+            break;
+        }
+      }
+      videoAsset = VideoAsset.fromRemoteUrl(arg.getUri(), streamingFormat, httpHeaders);
+    }
+    return videoAsset;
   }
 }

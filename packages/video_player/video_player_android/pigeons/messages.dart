@@ -59,8 +59,9 @@ class MixWithOthersMessage {
 @HostApi(dartHostTestHandler: 'TestHostVideoPlayerApi')
 abstract class AndroidVideoPlayerApi {
   void initialize();
-  TextureMessage create(CreateMessage msg);
+  TextureMessage create([CreateMessage? msg]);
   void dispose(TextureMessage msg);
+  void setDataSource(TextureMessage textureMsg, CreateMessage msg);
   void setLooping(LoopingMessage msg);
   void setVolume(VolumeMessage msg);
   void setPlaybackSpeed(PlaybackSpeedMessage msg);
@@ -68,5 +69,6 @@ abstract class AndroidVideoPlayerApi {
   PositionMessage position(TextureMessage msg);
   void seekTo(PositionMessage msg);
   void pause(TextureMessage msg);
+  void stop(TextureMessage msg);
   void setMixWithOthers(MixWithOthersMessage msg);
 }

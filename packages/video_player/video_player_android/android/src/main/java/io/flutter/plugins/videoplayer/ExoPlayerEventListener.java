@@ -14,7 +14,7 @@ final class ExoPlayerEventListener implements Player.Listener {
   private final ExoPlayer exoPlayer;
   private final VideoPlayerCallbacks events;
   private boolean isBuffering = false;
-  private boolean isInitialized = false;
+  private boolean isSent = false;
 
   ExoPlayerEventListener(ExoPlayer exoPlayer, VideoPlayerCallbacks events) {
     this.exoPlayer = exoPlayer;
@@ -34,11 +34,11 @@ final class ExoPlayerEventListener implements Player.Listener {
   }
 
   @SuppressWarnings("SuspiciousNameCombination")
-  private void sendInitialized() {
-    if (isInitialized) {
+  private void sendPlaybackInfo() {
+    if (isSent) {
       return;
     }
-    isInitialized = true;
+    isSent = true;
     VideoSize videoSize = exoPlayer.getVideoSize();
     int rotationCorrection = 0;
     int width = videoSize.width;
@@ -58,7 +58,7 @@ final class ExoPlayerEventListener implements Player.Listener {
         rotationCorrection = rotationDegrees;
       }
     }
-    events.onInitialized(width, height, exoPlayer.getDuration(), rotationCorrection);
+    events.onPlaybackInfoChanged(width, height, exoPlayer.getDuration(), rotationCorrection);
   }
 
   @Override
@@ -69,7 +69,7 @@ final class ExoPlayerEventListener implements Player.Listener {
         events.onBufferingUpdate(exoPlayer.getBufferedPosition());
         break;
       case Player.STATE_READY:
-        sendInitialized();
+        sendPlaybackInfo();
         break;
       case Player.STATE_ENDED:
         events.onCompleted();
